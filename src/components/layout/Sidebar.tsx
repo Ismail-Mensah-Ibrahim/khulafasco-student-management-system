@@ -13,8 +13,9 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
-  LogOut,
+  ClipboardList,
 } from "lucide-react";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { SchoolLogo } from "@/components/branding/SchoolLogo";
 import { SCHOOL } from "@/config/branding";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
     roles: ["all"],
   },
-  // Admin section
+  // Admin — Students
   {
     label: "Students",
     href: "/students",
@@ -50,9 +51,9 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["admin"],
     section: "Students",
   },
-  // Finance section
+  // Finance — visible to both roles
   {
-    label: "Finance",
+    label: "Student Finance",
     href: "/finance",
     icon: DollarSign,
     roles: ["all"],
@@ -72,7 +73,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ["all"],
     section: "Finance",
   },
-  // Admin only
+  // Admin — Administration
   {
     label: "Academic Years",
     href: "/admin/academic-years",
@@ -84,6 +85,13 @@ const NAV_ITEMS: NavItem[] = [
     label: "Staff Access",
     href: "/admin/staff",
     icon: Shield,
+    roles: ["admin"],
+    section: "Administration",
+  },
+  {
+    label: "Audit Logs",
+    href: "/admin/audit-logs",
+    icon: ClipboardList,
     roles: ["admin"],
     section: "Administration",
   },
@@ -247,25 +255,7 @@ export function Sidebar({
             )}
           </div>
         )}
-        <button
-          className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors"
-          style={{ color: "var(--sidebar-muted)" }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color =
-              "var(--sidebar-fg)";
-            (e.currentTarget as HTMLButtonElement).style.background =
-              "rgba(255,255,255,0.05)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color =
-              "var(--sidebar-muted)";
-            (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-          }}
-          aria-label="Sign out"
-        >
-          <LogOut className="w-4 h-4 flex-shrink-0" />
-          {!collapsed && <span>Sign Out</span>}
-        </button>
+        <LogoutButton collapsed={collapsed} />
       </div>
     </aside>
   );
