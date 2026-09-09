@@ -1,0 +1,225 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   Khulafasco Design System — Brand Token Overrides
+   Derived from the official KhOSA (Al Khulafau Ar-Rashiduun Islamic
+   Old Students Association) logo visual identity.
+
+   These override shadcn's generic gray tokens with the school's
+   official color palette: deep burgundy, rose gold, warm cream.
+   ============================================================ */
+
+:root {
+  /* ---- Khulafasco Brand Colors ---- */
+  --brand-primary: #6b1a2a;
+  --brand-primary-dark: #3d0d17;
+  --brand-primary-light: #8b2535;
+  --brand-primary-foreground: #ffffff;
+
+  --brand-secondary: #c4956a;
+  --brand-secondary-light: #e8c9a0;
+  --brand-secondary-foreground: #3d0d17;
+
+  --brand-accent: #f5e6d3;
+  --brand-accent-foreground: #6b1a2a;
+
+  /* ---- Override shadcn semantic tokens with brand palette ---- */
+  --background: #fafaf8;
+  --foreground: #1a0a0e;
+  --surface: #ffffff;
+  --muted: #f3ede8;
+  --muted-foreground: #6b5a5e;
+  --border: #e5d5c8;
+  --input: #e5d5c8;
+  --ring: #6b1a2a;
+
+  /* Override shadcn primary/secondary/accent with brand */
+  --primary: #6b1a2a;
+  --primary-foreground: #ffffff;
+  --secondary: #f5e6d3;
+  --secondary-foreground: #6b1a2a;
+  --accent: #f5e6d3;
+  --accent-foreground: #6b1a2a;
+  --destructive: #991b1b;
+
+  /* Card */
+  --card: #ffffff;
+  --card-foreground: #1a0a0e;
+  --popover: #ffffff;
+  --popover-foreground: #1a0a0e;
+
+  /* ---- Semantic Status Colors ---- */
+  --success: #166534;
+  --success-light: #dcfce7;
+  --success-foreground: #166534;
+  --warning: #92400e;
+  --warning-light: #fef3c7;
+  --warning-foreground: #92400e;
+  --danger: #991b1b;
+  --danger-light: #fee2e2;
+  --danger-foreground: #991b1b;
+  --info: #1e40af;
+  --info-light: #dbeafe;
+  --info-foreground: #1e40af;
+
+  /* ---- Sidebar ---- */
+  --sidebar-bg: #3d0d17;
+  --sidebar-fg: #f5e6d3;
+  --sidebar-muted: rgba(245, 230, 211, 0.6);
+  --sidebar-active-bg: rgba(196, 149, 106, 0.2);
+  --sidebar-active-fg: #e8c9a0;
+  --sidebar-border: rgba(196, 149, 106, 0.15);
+  /* shadcn sidebar tokens */
+  --sidebar: #3d0d17;
+  --sidebar-foreground: #f5e6d3;
+  --sidebar-primary: #c4956a;
+  --sidebar-primary-foreground: #3d0d17;
+  --sidebar-accent: rgba(196, 149, 106, 0.2);
+  --sidebar-accent-foreground: #e8c9a0;
+  --sidebar-ring: #c4956a;
+
+  /* ---- Radius ---- */
+  --radius: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1px 2px rgba(107, 26, 42, 0.06);
+  --shadow: 0 2px 8px rgba(107, 26, 42, 0.08), 0 1px 3px rgba(107, 26, 42, 0.05);
+  --shadow-lg: 0 8px 24px rgba(107, 26, 42, 0.12), 0 2px 8px rgba(107, 26, 42, 0.06);
+}
+
+/* ============================================================
+   Tailwind v4 Theme Registration
+   ============================================================ */
+@theme inline {
+  /* Brand colors */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-dark: var(--brand-primary-dark);
+  --color-brand-primary-light: var(--brand-primary-light);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-secondary-light: var(--brand-secondary-light);
+  --color-brand-accent: var(--brand-accent);
+
+  /* Semantic surface colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Status colors */
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
+  --color-danger: var(--danger);
+  --color-danger-light: var(--danger-light);
+
+  /* Sidebar */
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-fg: var(--sidebar-fg);
+
+  /* shadcn component tokens */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  /* Fonts */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-geist-mono), "Courier New", monospace;
+  --font-heading: var(--font-sans);
+
+  /* Radius */
+  --radius-sm: var(--radius-sm);
+  --radius: var(--radius);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-full: var(--radius-full);
+}
+
+/* ============================================================
+   Base Layer Overrides
+   ============================================================ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    box-sizing: border-box;
+  }
+
+  html {
+    height: 100%;
+    -webkit-text-size-adjust: 100%;
+    font-family: var(--font-sans);
+  }
+
+  body {
+    min-height: 100%;
+    background-color: var(--background);
+    color: var(--foreground);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* ============================================================
+   Scrollbar Styling
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--muted); }
+::-webkit-scrollbar-thumb { background: var(--brand-secondary); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brand-primary); }
+
+/* ============================================================
+   Print — receipt-friendly
+   ============================================================ */
+@media print {
+  body { background: white; color: black; font-size: 12pt; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+}
+
+/* ============================================================
+   Skeleton loading animation
+   ============================================================ */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    var(--border) 50%,
+    var(--muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
