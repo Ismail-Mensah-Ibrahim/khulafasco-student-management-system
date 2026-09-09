@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SCHOOL } from "@/config/branding";
+import { verifySession } from "@/lib/dal";
 import {
   Users,
   GraduationCap,
@@ -19,7 +20,9 @@ export const metadata: Metadata = {
  * Dashboard visual shell.
  * Real data will be wired from Supabase in Milestone 3.
  */
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = await verifySession();
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -31,7 +34,7 @@ export default function DashboardPage() {
           Dashboard
         </h1>
         <p className="text-sm mt-0.5" style={{ color: "var(--muted-foreground)" }}>
-          Welcome back. Here is an overview of {SCHOOL.shortName}.
+          Welcome back, <strong>{session.fullName}</strong>. Here is an overview of {SCHOOL.shortName}.
         </p>
       </div>
 

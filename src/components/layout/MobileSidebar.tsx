@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, LayoutDashboard, Users, UserPlus, DollarSign, Receipt, CreditCard, Shield, BookOpen, LogOut } from "lucide-react";
+import { Menu, X, LayoutDashboard, Users, UserPlus, DollarSign, Receipt, CreditCard, Shield, BookOpen, ClipboardList } from "lucide-react";
 import { SchoolLogo } from "@/components/branding/SchoolLogo";
 import { SCHOOL } from "@/config/branding";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 interface NavItem {
   label: string;
@@ -18,11 +19,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
   { label: "Students", href: "/students", icon: Users, roles: ["admin"] },
   { label: "Enroll Student", href: "/students/enroll", icon: UserPlus, roles: ["admin"] },
-  { label: "Finance", href: "/finance", icon: DollarSign, roles: ["all"] },
+  { label: "Student Finance", href: "/finance", icon: DollarSign, roles: ["all"] },
   { label: "Payments", href: "/finance/payments", icon: CreditCard, roles: ["all"] },
   { label: "Receipts", href: "/finance/receipts", icon: Receipt, roles: ["all"] },
   { label: "Academic Years", href: "/admin/academic-years", icon: BookOpen, roles: ["admin"] },
   { label: "Staff Access", href: "/admin/staff", icon: Shield, roles: ["admin"] },
+  { label: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"] },
 ];
 
 interface MobileSidebarProps {
@@ -136,13 +138,7 @@ export function MobileSidebar({ userRole = "admin", userName = "Staff User" }: M
           <p className="text-sm font-medium mb-3" style={{ color: "var(--sidebar-fg)" }}>
             {userName}
           </p>
-          <button
-            className="flex items-center gap-2 text-sm"
-            style={{ color: "var(--sidebar-muted)" }}
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
+          <LogoutButton />
         </div>
       </div>
     </>

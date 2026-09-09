@@ -41,10 +41,10 @@ export interface House {
 
 export interface Profile {
   id: string;
-  email: string;
   full_name: string;
   role: UserRole;
   is_active: boolean;
+  phone: string | null;
   created_at: string;
   updated_at: string;
 }
