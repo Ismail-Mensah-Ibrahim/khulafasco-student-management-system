@@ -264,8 +264,8 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   const [totalStudents, activeStudents, boardingStudents, dayStudents] = await Promise.all([
     countStudents({ academicYearId }),
     countStudents({ academicYearId, enrollmentStatus: "active" }),
-    countStudents({ academicYearId, studentType: "Boarding" }),
-    countStudents({ academicYearId, studentType: "Day" }),
+    countStudents({ academicYearId, studentType: "boarding" }),
+    countStudents({ academicYearId, studentType: "day" }),
   ]);
 
   const programStats: DashboardProgramStat[] = await Promise.all(

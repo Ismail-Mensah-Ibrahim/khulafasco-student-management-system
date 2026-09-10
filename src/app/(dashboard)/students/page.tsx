@@ -203,8 +203,8 @@ export default async function StudentsPage({
               style={{ background: "var(--background)", borderColor: "var(--border)", color: "var(--foreground)" }}
             >
               <option value="">All Types</option>
-              <option value="Boarding">Boarding</option>
-              <option value="Day">Day</option>
+              <option value="boarding">Boarding</option>
+              <option value="day">Day</option>
             </select>
           </div>
 
