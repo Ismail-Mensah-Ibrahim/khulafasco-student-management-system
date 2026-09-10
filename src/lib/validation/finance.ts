@@ -178,10 +178,67 @@ export const studentFinancialReconciliationSchema = z.object({
   }),
 });
 
+const optionalDateInput = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date.")
+  .refine((value) => !Number.isNaN(new Date(`${value}T00:00:00.000Z`).getTime()), "Enter a valid date.")
+  .optional()
+  .or(z.literal(""));
+
+export const paymentListQuerySchema = z.object({
+  search: z.string().trim().max(120, "Search must be 120 characters or fewer.").optional().default(""),
+  status: z.enum(PAYMENT_TRANSACTION_STATUSES).optional(),
+  payment_method: z.enum(PAYMENT_METHOD_VALUES).optional(),
+  academic_year_id: z.string().uuid("Select a valid academic year.").optional(),
+  paid_from: optionalDateInput,
+  paid_to: optionalDateInput,
+  page: z.coerce.number().int().min(1, "Page must be at least 1.").default(1),
+  page_size: z.coerce.number().int().refine((value) => [25, 50, 100].includes(value), "Page size must be 25, 50, or 100.").default(25),
+}).superRefine((values, context) => {
+  if (values.paid_from && values.paid_to && values.paid_from >= values.paid_to) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["paid_to"], message: "The end date must be after the start date." });
+  }
+});
+
+const paymentListItemSchema = z.object({
+  id: z.string().uuid(),
+  receipt_number: z.string().nullable(),
+  amount: z.number().finite(),
+  payment_method: z.enum(PAYMENT_METHOD_VALUES),
+  reference: z.string().nullable(),
+  status: z.enum(PAYMENT_TRANSACTION_STATUSES),
+  paid_at: z.string(),
+  recorded_by: z.string().uuid(),
+  student: z.object({
+    id: z.string().uuid(),
+    jhs_index_number: z.string(),
+    first_name: z.string(),
+    middle_name: z.string().nullable(),
+    last_name: z.string(),
+  }),
+  academic_year: z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+  }),
+});
+
+export const financePaymentsSchema = z.object({
+  items: z.array(paymentListItemSchema),
+  pagination: z.object({
+    page: z.number().int().min(1),
+    page_size: z.number().int().min(1),
+    total_count: z.number().int().min(0),
+    total_pages: z.number().int().min(0),
+  }),
+});
+
 export type RecordStudentPaymentValues = z.infer<typeof recordStudentPaymentSchema>;
 export type PaymentRecord = z.infer<typeof paymentRecordSchema>;
 export type SetStudentFeeChargeValues = z.infer<typeof setStudentFeeChargeSchema>;
 export type SetStudentAmountDueValues = z.infer<typeof setStudentAmountDueSchema>;
 export type StudentFinancialReconciliation = z.infer<typeof studentFinancialReconciliationSchema>;
+export type PaymentListQuery = z.infer<typeof paymentListQuerySchema>;
+export type FinancePayments = z.infer<typeof financePaymentsSchema>;
 
 export type StudentFinanceResult = z.infer<typeof studentFinanceSchema>;
