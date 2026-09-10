@@ -10,6 +10,7 @@ import type {
   GuardianRelationship,
   PaymentMethod,
   PaymentStatus,
+  PaymentTransactionStatus,
   UserRole,
 } from "@/config/constants";
 
@@ -122,6 +123,18 @@ export interface Payment {
   recorded_by_profile?: Profile;
 }
 
+export interface RecentPayment {
+  payment_id: string;
+  receipt_number: string;
+  amount: number;
+  payment_method: "cash" | "mobile_money" | "bank_transfer" | "other";
+  reference: string | null;
+  status: PaymentTransactionStatus;
+  notes: string | null;
+  paid_at: string;
+  recorded_by: string;
+}
+
 export interface PaymentAllocation {
   id: string;
   payment_id: string;
@@ -148,20 +161,24 @@ export interface AuditLog {
 // ---------------------------------------------------------------------------
 
 export interface StudentFinance {
-  student_id: string;
-  jhs_index_number: string;
-  full_name: string;
-  program_name: string;
-  house_name: string | null;
-  student_type: BoardingType;
-  academic_year: string;
-  photo_path: string | null;
-  total_amount_due: number | null;
-  total_paid: number;
-  outstanding_balance: number;
-  payment_status: PaymentStatus;
-  charges: StudentCharge[];
-  payments: Payment[];
+  student: {
+    id: string;
+    jhs_index_number: string;
+    full_name: string;
+    program_name: string;
+    house_name: string | null;
+    student_type: BoardingType;
+    academic_year: string;
+    photo_path: string | null;
+  };
+  financial: {
+    total_amount_due: number | null;
+    total_paid: number;
+    outstanding_balance: number | null;
+    payment_status: PaymentStatus;
+  };
+  fee_allocations: StudentCharge[];
+  recent_payments: RecentPayment[];
 }
 
 export interface FinancialReconciliation {

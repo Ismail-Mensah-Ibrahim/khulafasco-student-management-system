@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { normalizeIndexNumber } from "@/lib/utils";
+import { studentFinanceSchema, type StudentFinanceResult } from "@/lib/validation/finance";
 import type { AcademicYear, House, Program, Student } from "@/types";
 
 export interface DashboardProgramStat {
@@ -42,6 +43,40 @@ export interface StudentPageResult {
   pageSize: number;
   totalPages: number;
   error: string | null;
+}
+
+export type StudentFinanceLookupResult =
+  | { data: StudentFinanceResult; error: null }
+  | { data: null; error: "not_found" | "unavailable" | "malformed" };
+
+export async function getStudentFinanceByIndex(
+  rawIndexNumber: string
+): Promise<StudentFinanceLookupResult> {
+  const indexNumber = normalizeIndexNumber(rawIndexNumber);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_student_finance_by_index", {
+    p_jhs_index_number: indexNumber,
+  });
+
+  if (error) {
+    console.error("getStudentFinanceByIndex RPC error:", {
+      code: error.code,
+      message: error.message,
+    });
+    return { data: null, error: "unavailable" };
+  }
+
+  if (data === null || data === undefined) {
+    return { data: null, error: "not_found" };
+  }
+
+  const parsed = studentFinanceSchema.safeParse(data);
+  if (!parsed.success) {
+    console.error("getStudentFinanceByIndex malformed RPC response:", parsed.error.issues[0]);
+    return { data: null, error: "malformed" };
+  }
+
+  return { data: parsed.data, error: null };
 }
 
 export async function getAcademicYears(): Promise<AcademicYear[]> {

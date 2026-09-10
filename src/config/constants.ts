@@ -50,6 +50,10 @@ export const PAYMENT_STATUSES = [
 
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+export const PAYMENT_TRANSACTION_STATUSES = ["completed", "cancelled", "reversed"] as const;
+
+export type PaymentTransactionStatus = (typeof PAYMENT_TRANSACTION_STATUSES)[number];
+
 export const ROLES = ["admin", "finance_officer"] as const;
 
 export type UserRole = (typeof ROLES)[number];
