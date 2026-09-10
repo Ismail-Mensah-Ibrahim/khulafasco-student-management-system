@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Search, WalletCards } from "lucide-react";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { PaymentForm } from "./_components/PaymentForm";
 import { requireFinanceOrAdmin } from "@/lib/dal";
-import { getStudentFinanceByIndex } from "@/lib/data";
-import { formatCurrency } from "@/lib/utils";
+import { getAcademicYears, getHouses, getPrograms, getStudentFinanceByIndex } from "@/lib/data";
+import { formatCurrency, getFullName } from "@/lib/utils";
 import { SCHOOL } from "@/config/branding";
 
 export const metadata: Metadata = {
@@ -17,17 +20,6 @@ function formatAmount(amount: number | null): string {
 
 function formatFinancialAmount(amount: number | null): string {
   return amount === null ? "Not Set" : formatCurrency(amount);
-}
-
-function getErrorMessage(error: "not_found" | "unavailable" | "malformed"): string {
-  switch (error) {
-    case "not_found":
-      return "No financial information is currently available for this student.";
-    case "malformed":
-      return "The financial information returned by the database could not be displayed safely.";
-    default:
-      return "Unable to load financial information right now. Please try again.";
-  }
 }
 
 function formatFinanceStatus(status: "not_set" | "paid" | "partially_paid" | "unpaid"): string {
@@ -73,6 +65,33 @@ export default async function FinancePage({
   const indexNumber = typeof params.index === "string" ? params.index.trim() : "";
   const invalidIndex = indexNumber.length > 0 && !/^\d{10}$/.test(indexNumber);
   const lookup = indexNumber && !invalidIndex ? await getStudentFinanceByIndex(indexNumber) : null;
+  const finance = lookup && !lookup.error ? lookup.data : null;
+  let referenceData: Awaited<ReturnType<typeof Promise.all<[ReturnType<typeof getPrograms>, ReturnType<typeof getHouses>, ReturnType<typeof getAcademicYears>]>>> | null = null;
+  let referenceDataError = false;
+
+  if (finance) {
+    try {
+      referenceData = await Promise.all([
+        getPrograms({ throwOnError: true }),
+        getHouses({ throwOnError: true }),
+        getAcademicYears(),
+      ]);
+    } catch (error) {
+      console.error("Finance reference data error:", error instanceof Error ? error.message : "Unknown error");
+      referenceDataError = true;
+    }
+  }
+
+  const [programs, houses, academicYears] = referenceData ?? [[], [], []];
+  const programName = finance?.student.program_id
+    ? programs.find((program) => program.id === finance.student.program_id)?.name ?? "Not assigned"
+    : "Not assigned";
+  const houseName = finance?.student.house_id
+    ? houses.find((house) => house.id === finance.student.house_id)?.name ?? "Not assigned"
+    : "Not assigned";
+  const academicYearName = finance?.student.academic_year_id
+    ? academicYears.find((year) => year.id === finance.student.academic_year_id)?.name ?? "Not assigned"
+    : "Not assigned";
 
   return (
     <div className="space-y-6">
@@ -119,14 +138,31 @@ export default async function FinancePage({
       {!indexNumber ? (
         <EmptyState icon={<WalletCards className="h-7 w-7" />} title="Search for a student" description="Search for a student to view their financial information." />
       ) : invalidIndex ? null : lookup?.error ? (
-        <EmptyState title={getErrorMessage(lookup.error)} description="No financial values were calculated or fabricated." />
+        lookup.error === "not_found" ? (
+          <EmptyState
+            icon={<Search className="h-7 w-7" />}
+            title="Student Not Found"
+            description="We couldn't find a student with that JHS index number. Please check the index number and try again."
+          />
+        ) : lookup.error === "unauthorized" ? (
+          <ErrorState
+            title="You don't have permission to access this financial information."
+            description="Please contact an administrator if you believe you should have access."
+          />
+        ) : (
+          <ErrorState
+            title="Unable to Load Financial Information"
+            description="We could not load this student's financial information. Please try again."
+            action={<Link className="inline-flex h-9 items-center rounded-lg border border-border bg-background px-3 text-sm font-medium hover:bg-muted" href={`/finance?index=${encodeURIComponent(indexNumber)}`}>Try again</Link>}
+          />
+        )
       ) : lookup ? (
         <section className="space-y-6">
           <div className="rounded-xl border p-4 md:p-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Student</p>
-                <h2 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>{lookup.data.student.full_name}</h2>
+                <h2 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>{getFullName(lookup.data.student.first_name, lookup.data.student.middle_name, lookup.data.student.last_name)}</h2>
                 <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>{lookup.data.student.jhs_index_number}</p>
               </div>
               <span className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: "var(--muted)", color: "var(--foreground)" }}>
@@ -134,11 +170,14 @@ export default async function FinancePage({
               </span>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
-              <div><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Academic year</p><p className="font-medium">{lookup.data.student.academic_year}</p></div>
-              <div><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Program</p><p className="font-medium">{lookup.data.student.program_name}</p></div>
-              <div><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>House</p><p className="font-medium">{lookup.data.student.house_name ?? "Not assigned"}</p></div>
+              <div><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Academic year</p><p className="font-medium">{academicYearName}</p></div>
+              <div><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Program</p><p className="font-medium">{programName}</p></div>
+              <div><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>House</p><p className="font-medium">{houseName}</p></div>
               <div><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Student type</p><p className="font-medium">{lookup.data.student.student_type === "boarding" ? "Boarding" : "Day"}</p></div>
             </div>
+            {referenceDataError ? (
+              <p role="alert" className="mt-4 text-sm text-amber-700">Some reference details are temporarily unavailable. Financial values below remain from the authoritative finance service.</p>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -149,6 +188,12 @@ export default async function FinancePage({
               </div>
             ))}
           </div>
+
+          <PaymentForm
+            student={lookup.data.student}
+            financial={lookup.data.financial}
+            fee_allocations={lookup.data.fee_allocations}
+          />
 
           <div className="rounded-xl border p-4 md:p-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             <h2 className="mb-4 text-lg font-semibold">Charges</h2>

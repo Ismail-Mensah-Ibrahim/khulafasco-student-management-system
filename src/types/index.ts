@@ -9,6 +9,7 @@ import type {
   Gender,
   GuardianRelationship,
   PaymentMethod,
+  PaymentMethodValue,
   PaymentStatus,
   PaymentTransactionStatus,
   UserRole,
@@ -127,12 +128,26 @@ export interface RecentPayment {
   payment_id: string;
   receipt_number: string;
   amount: number;
-  payment_method: "cash" | "mobile_money" | "bank_transfer" | "other";
+  payment_method: PaymentMethodValue;
   reference: string | null;
   status: PaymentTransactionStatus;
   notes: string | null;
   paid_at: string;
   recorded_by: string;
+}
+
+export interface PaymentRecord {
+  id: string;
+  student_id: string;
+  amount: number;
+  payment_method: PaymentMethodValue;
+  reference: string | null;
+  status: PaymentTransactionStatus;
+  notes: string | null;
+  receipt_number: string | null;
+  recorded_by: string;
+  paid_at: string;
+  created_at: string;
 }
 
 export interface PaymentAllocation {

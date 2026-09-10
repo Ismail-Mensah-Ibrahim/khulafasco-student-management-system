@@ -41,6 +41,10 @@ export const PAYMENT_METHODS = [
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
+export const PAYMENT_METHOD_VALUES = ["cash", "mobile_money", "bank_transfer", "other"] as const;
+
+export type PaymentMethodValue = (typeof PAYMENT_METHOD_VALUES)[number];
+
 export const PAYMENT_STATUSES = [
   "not_set",
   "unpaid",
