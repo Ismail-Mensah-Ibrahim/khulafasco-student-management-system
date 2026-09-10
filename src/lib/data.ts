@@ -89,7 +89,13 @@ export async function getHouses(): Promise<House[]> {
   if (error) {
     // Log and return an empty list so the dashboard can still render
     // when houses cannot be fetched (transient DB issues).
-    console.error("getHouses error:", error);
+    // Attempt to stringify the error (handles non-enumerable fields)
+    try {
+      const errStr = typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error);
+      console.error("getHouses error:", errStr);
+    } catch {
+      console.error("getHouses error: (unstringifiable)", error);
+    }
     return [] as House[];
   }
 
