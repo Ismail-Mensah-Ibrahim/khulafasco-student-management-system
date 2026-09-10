@@ -17,7 +17,7 @@ export const HOUSES = ["Abubakar", "Umar", "Uthman", "Ali"] as const;
 
 export type House = (typeof HOUSES)[number];
 
-export const BOARDING_TYPES = ["Boarding", "Day"] as const;
+export const BOARDING_TYPES = ["boarding", "day"] as const;
 
 export type BoardingType = (typeof BOARDING_TYPES)[number];
 
