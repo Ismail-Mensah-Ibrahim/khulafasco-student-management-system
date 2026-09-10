@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { normalizeIndexNumber } from "@/lib/utils";
-import { studentFinanceSchema, type StudentFinanceResult } from "@/lib/validation/finance";
+import {
+  studentFinanceSchema,
+  studentFinancialReconciliationSchema,
+  type StudentFinanceResult,
+  type StudentFinancialReconciliation,
+} from "@/lib/validation/finance";
 import type { AcademicYear, FeeType, House, Program, Student } from "@/types";
 
 export interface DashboardProgramStat {
@@ -49,6 +54,10 @@ export type StudentFinanceLookupResult =
   | { data: StudentFinanceResult; error: null }
   | { data: null; error: "not_found" | "unauthorized" | "unavailable" | "malformed" };
 
+export type StudentFinancialReconciliationResult =
+  | { data: StudentFinancialReconciliation; error: null }
+  | { data: null; error: "not_found" | "unauthorized" | "unavailable" | "malformed" };
+
 function isStudentNotFoundError(message: string): boolean {
   const normalizedMessage = message.toLowerCase();
   if (normalizedMessage.startsWith("no student found with jhs/bece index number:")) {
@@ -65,6 +74,15 @@ function isStudentNotFoundError(message: string): boolean {
 function isFinanceUnauthorizedError(code: string | undefined, message: string): boolean {
   const normalizedMessage = message.toLowerCase();
   return code === "42501" || normalizedMessage.includes("not authorized") || normalizedMessage.includes("unauthorized");
+}
+
+function mapReconciliationError(
+  code: string | undefined,
+  message: string
+): Exclude<StudentFinancialReconciliationResult["error"], null> {
+  if (isFinanceUnauthorizedError(code, message)) return "unauthorized";
+  if (isStudentNotFoundError(message)) return "not_found";
+  return "unavailable";
 }
 
 export async function getStudentFinanceByIndex(
@@ -102,6 +120,40 @@ export async function getStudentFinanceByIndex(
     return { data: parsed.data, error: null };
   } catch (error) {
     console.error("getStudentFinanceByIndex unexpected error:", error instanceof Error ? error.message : "Unknown error");
+    return { data: null, error: "unavailable" };
+  }
+}
+
+export async function getStudentFinancialReconciliation(
+  rawIndexNumber: string
+): Promise<StudentFinancialReconciliationResult> {
+  try {
+    const indexNumber = normalizeIndexNumber(rawIndexNumber);
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_student_financial_reconciliation", {
+      p_jhs_index_number: indexNumber,
+    });
+
+    if (error) {
+      console.error("getStudentFinancialReconciliation RPC error:", {
+        code: error.code,
+        message: error.message,
+      });
+      return { data: null, error: mapReconciliationError(error.code, error.message) };
+    }
+
+    const parsed = studentFinancialReconciliationSchema.safeParse(data);
+    if (!parsed.success) {
+      console.error("getStudentFinancialReconciliation malformed RPC response:", parsed.error.issues[0]);
+      return { data: null, error: "malformed" };
+    }
+
+    return { data: parsed.data, error: null };
+  } catch (error) {
+    console.error(
+      "getStudentFinancialReconciliation unexpected error:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
     return { data: null, error: "unavailable" };
   }
 }

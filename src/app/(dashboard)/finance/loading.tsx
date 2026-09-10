@@ -10,6 +10,7 @@ export default function Loading() {
       <div className="rounded-xl border p-4 md:p-6" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
         <LoadingState rows={3} cols={2} />
       </div>
+      <LoadingState rows={5} variant="cards" />
     </div>
   );
 }

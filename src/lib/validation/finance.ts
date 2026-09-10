@@ -154,9 +154,34 @@ export const studentChargeMutationResultSchema = z.object({
   amount_paid: z.number().finite(),
 });
 
+export const studentFinancialReconciliationSchema = z.object({
+  student: z.object({
+    id: z.string(),
+    jhs_index_number: z.string(),
+    first_name: z.string(),
+    middle_name: z.string().nullable(),
+    last_name: z.string(),
+    student_type: z.enum(BOARDING_TYPES),
+  }),
+  financial: z.object({
+    total_amount_due: z.number().finite().nullable(),
+    total_fee_charges: z.number().finite(),
+    total_paid: z.number().finite(),
+    outstanding_balance: z.number().finite().nullable(),
+    charge_difference: z.number().finite().nullable(),
+    reconciliation_status: z.enum([
+      "amount_due_not_set",
+      "balanced",
+      "charges_below_total_due",
+      "charges_above_total_due",
+    ]),
+  }),
+});
+
 export type RecordStudentPaymentValues = z.infer<typeof recordStudentPaymentSchema>;
 export type PaymentRecord = z.infer<typeof paymentRecordSchema>;
 export type SetStudentFeeChargeValues = z.infer<typeof setStudentFeeChargeSchema>;
 export type SetStudentAmountDueValues = z.infer<typeof setStudentAmountDueSchema>;
+export type StudentFinancialReconciliation = z.infer<typeof studentFinancialReconciliationSchema>;
 
 export type StudentFinanceResult = z.infer<typeof studentFinanceSchema>;

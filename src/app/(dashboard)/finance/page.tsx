@@ -7,8 +7,9 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { PaymentForm } from "./_components/PaymentForm";
 import { StudentChargeForm } from "./_components/StudentChargeForm";
 import { AmountDueForm } from "./_components/AmountDueForm";
+import { ReconciliationPanel } from "./_components/ReconciliationPanel";
 import { requireFinanceOrAdmin } from "@/lib/dal";
-import { getAcademicYears, getFeeTypes, getHouses, getPrograms, getStudentFinanceByIndex } from "@/lib/data";
+import { getAcademicYears, getFeeTypes, getHouses, getPrograms, getStudentFinanceByIndex, getStudentFinancialReconciliation } from "@/lib/data";
 import { formatCurrency, getFullName } from "@/lib/utils";
 import { SCHOOL } from "@/config/branding";
 
@@ -67,6 +68,7 @@ export default async function FinancePage({
   const indexNumber = typeof params.index === "string" ? params.index.trim() : "";
   const invalidIndex = indexNumber.length > 0 && !/^\d{10}$/.test(indexNumber);
   const lookup = indexNumber && !invalidIndex ? await getStudentFinanceByIndex(indexNumber) : null;
+  const reconciliation = indexNumber && !invalidIndex ? await getStudentFinancialReconciliation(indexNumber) : null;
   const finance = lookup && !lookup.error ? lookup.data : null;
   let referenceData: Awaited<ReturnType<typeof Promise.all<[ReturnType<typeof getPrograms>, ReturnType<typeof getHouses>, ReturnType<typeof getAcademicYears>, ReturnType<typeof getFeeTypes>]>>> | null = null;
   let referenceDataError = false;
@@ -191,6 +193,8 @@ export default async function FinancePage({
               </div>
             ))}
           </div>
+
+          {reconciliation ? <ReconciliationPanel result={reconciliation} /> : null}
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <StudentChargeForm student={lookup.data.student} feeTypes={feeTypes} />
