@@ -87,7 +87,10 @@ export async function getHouses(): Promise<House[]> {
     .order("name", { ascending: true });
 
   if (error) {
-    throw new Error("Unable to load houses.");
+    // Log and return an empty list so the dashboard can still render
+    // when houses cannot be fetched (transient DB issues).
+    console.error("getHouses error:", error);
+    return [] as House[];
   }
 
   return (data ?? []) as House[];
