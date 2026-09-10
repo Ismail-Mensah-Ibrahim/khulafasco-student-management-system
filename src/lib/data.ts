@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { normalizeIndexNumber } from "@/lib/utils";
 import { studentFinanceSchema, type StudentFinanceResult } from "@/lib/validation/finance";
-import type { AcademicYear, House, Program, Student } from "@/types";
+import type { AcademicYear, FeeType, House, Program, Student } from "@/types";
 
 export interface DashboardProgramStat {
   name: string;
@@ -168,6 +168,23 @@ export async function getHouses(options: { throwOnError?: boolean } = {}): Promi
   }
 
   return (data ?? []) as House[];
+}
+
+export async function getFeeTypes(options: { throwOnError?: boolean } = {}): Promise<FeeType[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("fee_types")
+    .select("*")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error) {
+    if (options.throwOnError) throw new Error("Unable to load fee types.");
+    console.error("getFeeTypes error:", error);
+    return [];
+  }
+
+  return (data ?? []) as FeeType[];
 }
 
 export async function getStudentsPage(filters: StudentQueryFilters = {}): Promise<StudentPageResult> {

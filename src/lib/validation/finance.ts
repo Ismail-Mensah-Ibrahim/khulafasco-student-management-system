@@ -15,6 +15,7 @@ const feeTypeSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   created_at: z.string(),
+  is_active: z.boolean().optional(),
 });
 
 const chargeSchema = z.object({
@@ -123,7 +124,39 @@ export const paymentRecordSchema = z.object({
   created_at: z.string(),
 });
 
+const moneyInput = z
+  .string()
+  .trim()
+  .regex(/^\d+(\.\d{1,2})?$/, "Enter an amount with up to two decimal places.")
+  .transform(Number)
+  .refine((value) => Number.isFinite(value) && value >= 0, "Amount cannot be negative.");
+
+const indexInput = z.string().trim().regex(/^\d{10}$/, "Enter a valid JHS index number.");
+
+export const setStudentFeeChargeSchema = z.object({
+  jhs_index_number: indexInput,
+  fee_type_id: z.string().trim().uuid("Select a valid fee type."),
+  amount: moneyInput,
+  description: z.string().trim().max(500, "Description must be 500 characters or fewer.").transform((value) => value || null),
+});
+
+export const setStudentAmountDueSchema = z.object({
+  jhs_index_number: indexInput,
+  amount_due: moneyInput,
+});
+
+export const studentChargeMutationResultSchema = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  fee_type_id: z.string(),
+  academic_year_id: z.string(),
+  amount_due: z.number().finite(),
+  amount_paid: z.number().finite(),
+});
+
 export type RecordStudentPaymentValues = z.infer<typeof recordStudentPaymentSchema>;
 export type PaymentRecord = z.infer<typeof paymentRecordSchema>;
+export type SetStudentFeeChargeValues = z.infer<typeof setStudentFeeChargeSchema>;
+export type SetStudentAmountDueValues = z.infer<typeof setStudentAmountDueSchema>;
 
 export type StudentFinanceResult = z.infer<typeof studentFinanceSchema>;

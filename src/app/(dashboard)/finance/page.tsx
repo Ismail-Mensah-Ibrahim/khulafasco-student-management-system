@@ -5,8 +5,10 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { PaymentForm } from "./_components/PaymentForm";
+import { StudentChargeForm } from "./_components/StudentChargeForm";
+import { AmountDueForm } from "./_components/AmountDueForm";
 import { requireFinanceOrAdmin } from "@/lib/dal";
-import { getAcademicYears, getHouses, getPrograms, getStudentFinanceByIndex } from "@/lib/data";
+import { getAcademicYears, getFeeTypes, getHouses, getPrograms, getStudentFinanceByIndex } from "@/lib/data";
 import { formatCurrency, getFullName } from "@/lib/utils";
 import { SCHOOL } from "@/config/branding";
 
@@ -66,7 +68,7 @@ export default async function FinancePage({
   const invalidIndex = indexNumber.length > 0 && !/^\d{10}$/.test(indexNumber);
   const lookup = indexNumber && !invalidIndex ? await getStudentFinanceByIndex(indexNumber) : null;
   const finance = lookup && !lookup.error ? lookup.data : null;
-  let referenceData: Awaited<ReturnType<typeof Promise.all<[ReturnType<typeof getPrograms>, ReturnType<typeof getHouses>, ReturnType<typeof getAcademicYears>]>>> | null = null;
+  let referenceData: Awaited<ReturnType<typeof Promise.all<[ReturnType<typeof getPrograms>, ReturnType<typeof getHouses>, ReturnType<typeof getAcademicYears>, ReturnType<typeof getFeeTypes>]>>> | null = null;
   let referenceDataError = false;
 
   if (finance) {
@@ -75,6 +77,7 @@ export default async function FinancePage({
         getPrograms({ throwOnError: true }),
         getHouses({ throwOnError: true }),
         getAcademicYears(),
+        getFeeTypes({ throwOnError: true }),
       ]);
     } catch (error) {
       console.error("Finance reference data error:", error instanceof Error ? error.message : "Unknown error");
@@ -82,7 +85,7 @@ export default async function FinancePage({
     }
   }
 
-  const [programs, houses, academicYears] = referenceData ?? [[], [], []];
+  const [programs, houses, academicYears, feeTypes] = referenceData ?? [[], [], [], []];
   const programName = finance?.student.program_id
     ? programs.find((program) => program.id === finance.student.program_id)?.name ?? "Not assigned"
     : "Not assigned";
@@ -187,6 +190,11 @@ export default async function FinancePage({
                 <p className="mt-2 text-2xl font-semibold" style={{ color: "var(--foreground)" }}>{formatFinancialAmount(amount as number | null)}</p>
               </div>
             ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <StudentChargeForm student={lookup.data.student} feeTypes={feeTypes} />
+            <AmountDueForm student={lookup.data.student} currentAmount={lookup.data.financial.total_amount_due} />
           </div>
 
           <PaymentForm

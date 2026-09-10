@@ -87,6 +87,7 @@ export interface FeeType {
   name: string;
   description: string | null;
   created_at: string;
+  is_active: boolean;
 }
 
 export interface FeeConfiguration {
