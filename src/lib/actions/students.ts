@@ -8,7 +8,7 @@ import {
 } from "@/lib/validation/student-enrollment";
 
 export type EnrollmentState =
-  | { success: true; indexNumber: string }
+  | { success: true; indexNumber: string; studentId: string }
   | {
       success: false;
       message: string;
@@ -79,7 +79,11 @@ export async function createStudentAction(
 
   const values: StudentEnrollmentValues = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.from("students").insert(values);
+  const { data: student, error } = await supabase
+    .from("students")
+    .insert(values)
+    .select("id")
+    .single();
 
   if (error) {
     return {
@@ -88,5 +92,5 @@ export async function createStudentAction(
     };
   }
 
-  return { success: true, indexNumber: values.jhs_index_number };
+  return { success: true, indexNumber: values.jhs_index_number, studentId: student.id };
 }
