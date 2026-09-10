@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SCHOOL } from "@/config/branding";
 import { verifySession } from "@/lib/dal";
+import { getDashboardSummary } from "@/lib/data";
 import {
   Users,
   GraduationCap,
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
  */
 export default async function DashboardPage() {
   const session = await verifySession();
+  const summary = await getDashboardSummary();
 
   return (
     <div className="space-y-6">
@@ -47,28 +49,28 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Total Students"
-            value="—"
+            value={String(summary.totalStudents)}
             icon={Users}
             color="var(--brand-primary)"
             bg="var(--brand-accent)"
           />
           <StatCard
             label="Active"
-            value="—"
+            value={String(summary.activeStudents)}
             icon={GraduationCap}
             color="var(--success)"
             bg="var(--success-light)"
           />
           <StatCard
             label="Boarding"
-            value="—"
+            value={String(summary.boardingStudents)}
             icon={Home}
             color="var(--brand-secondary-foreground)"
             bg="var(--brand-accent)"
           />
           <StatCard
             label="Day Students"
-            value="—"
+            value={String(summary.dayStudents)}
             icon={Bus}
             color="var(--info)"
             bg="var(--info-light)"
@@ -132,36 +134,37 @@ export default async function DashboardPage() {
             Students by Program
           </h3>
           <div className="space-y-3">
-            {[
-              "General Arts",
-              "General Science",
-              "Business",
-              "Home Economics",
-              "General Agric",
-            ].map((program) => (
-              <div key={program} className="flex items-center gap-3">
-                <span className="text-sm flex-1 truncate" style={{ color: "var(--foreground)" }}>
-                  {program}
-                </span>
-                <div
-                  className="h-2 rounded-full flex-1 max-w-[120px]"
-                  style={{ background: "var(--muted)" }}
-                >
+            {summary.programStats.length === 0 ? (
+              <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                No program metrics are available for the current academic year.
+              </p>
+            ) : (
+              summary.programStats.map((program) => (
+                <div key={program.name} className="flex items-center gap-3">
+                  <span className="text-sm flex-1 truncate" style={{ color: "var(--foreground)" }}>
+                    {program.name}
+                  </span>
                   <div
-                    className="h-2 rounded-full"
-                    style={{ width: "0%", background: "var(--brand-primary)" }}
-                  />
+                    className="h-2 rounded-full flex-1 max-w-[120px]"
+                    style={{ background: "var(--muted)" }}
+                  >
+                    <div
+                      className="h-2 rounded-full"
+                      style={{ width: `${Math.max(program.percentage, 6)}%`, background: "var(--brand-primary)" }}
+                    />
+                  </div>
+                  <span className="text-xs w-8 text-right tabular-nums" style={{ color: "var(--muted-foreground)" }}>
+                    {program.count}
+                  </span>
                 </div>
-                <span className="text-xs w-6 text-right tabular-nums"
-                  style={{ color: "var(--muted-foreground)" }}>
-                  —
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-          <p className="text-xs mt-4 text-center" style={{ color: "var(--muted-foreground)" }}>
-            Data will load after Supabase is connected (Milestone 3)
-          </p>
+          {summary.currentAcademicYear && (
+            <p className="text-xs mt-4 text-center" style={{ color: "var(--muted-foreground)" }}>
+              {summary.currentAcademicYear.name}
+            </p>
+          )}
         </div>
 
         {/* Recent activity */}
@@ -206,34 +209,40 @@ export default async function DashboardPage() {
           Students by House
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {["Abubakar", "Umar", "Uthman", "Ali"].map((house, i) => {
-            const colors = [
-              "var(--brand-primary)",
-              "var(--brand-secondary)",
-              "var(--success)",
-              "var(--info)",
-            ];
-            return (
-              <div
-                key={house}
-                className="rounded-lg p-4 text-center"
-                style={{ background: "var(--muted)", border: "1px solid var(--border)" }}
-              >
+          {summary.houseStats.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+              No house allocations are available for the current academic year.
+            </p>
+          ) : (
+            summary.houseStats.map((house, i) => {
+              const colors = [
+                "var(--brand-primary)",
+                "var(--brand-secondary)",
+                "var(--success)",
+                "var(--info)",
+              ];
+              return (
                 <div
-                  className="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center text-white text-xs font-bold"
-                  style={{ background: colors[i] }}
+                  key={house.name}
+                  className="rounded-lg p-4 text-center"
+                  style={{ background: "var(--muted)", border: "1px solid var(--border)" }}
                 >
-                  {house[0]}
+                  <div
+                    className="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center text-white text-xs font-bold"
+                    style={{ background: colors[i % colors.length] }}
+                  >
+                    {house.name[0]}
+                  </div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                    {house.name}
+                  </p>
+                  <p className="text-xl font-bold mt-1" style={{ color: colors[i % colors.length] }}>
+                    {house.count}
+                  </p>
                 </div>
-                <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-                  {house}
-                </p>
-                <p className="text-xl font-bold mt-1" style={{ color: colors[i] }}>
-                  —
-                </p>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>
