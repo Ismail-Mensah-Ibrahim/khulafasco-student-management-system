@@ -3,6 +3,9 @@ import { normalizeIndexNumber } from "@/lib/utils";
 import {
   studentFinanceSchema,
   studentFinancialReconciliationSchema,
+  financePaymentsSchema,
+  type FinancePayments,
+  type PaymentListQuery,
   type StudentFinanceResult,
   type StudentFinancialReconciliation,
 } from "@/lib/validation/finance";
@@ -57,6 +60,10 @@ export type StudentFinanceLookupResult =
 export type StudentFinancialReconciliationResult =
   | { data: StudentFinancialReconciliation; error: null }
   | { data: null; error: "not_found" | "unauthorized" | "unavailable" | "malformed" };
+
+export type FinancePaymentsResult =
+  | { data: FinancePayments; error: null }
+  | { data: null; error: "unauthorized" | "unavailable" | "malformed" };
 
 function isStudentNotFoundError(message: string): boolean {
   const normalizedMessage = message.toLowerCase();
@@ -154,6 +161,45 @@ export async function getStudentFinancialReconciliation(
       "getStudentFinancialReconciliation unexpected error:",
       error instanceof Error ? error.message : "Unknown error"
     );
+    return { data: null, error: "unavailable" };
+  }
+}
+
+function toRpcDate(value: string | undefined, endOfDay = false): string | null {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (endOfDay) date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString();
+}
+
+export async function getFinancePayments(query: PaymentListQuery): Promise<FinancePaymentsResult> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_finance_payments", {
+      p_page: query.page,
+      p_page_size: query.page_size,
+      p_search: query.search || null,
+      p_status: query.status ?? null,
+      p_payment_method: query.payment_method ?? null,
+      p_academic_year_id: query.academic_year_id ?? null,
+      p_paid_from: toRpcDate(query.paid_from || undefined),
+      p_paid_to: toRpcDate(query.paid_to || undefined, true),
+    });
+
+    if (error) {
+      console.error("getFinancePayments RPC error:", { code: error.code, message: error.message });
+      return { data: null, error: isFinanceUnauthorizedError(error.code, error.message) ? "unauthorized" : "unavailable" };
+    }
+
+    const parsed = financePaymentsSchema.safeParse(data);
+    if (!parsed.success) {
+      console.error("getFinancePayments malformed RPC response:", parsed.error.issues[0]);
+      return { data: null, error: "malformed" };
+    }
+
+    return { data: parsed.data, error: null };
+  } catch (error) {
+    console.error("getFinancePayments unexpected error:", error instanceof Error ? error.message : "Unknown error");
     return { data: null, error: "unavailable" };
   }
 }
