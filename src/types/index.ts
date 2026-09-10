@@ -51,7 +51,7 @@ export interface Profile {
 
 export interface Student {
   id: string;
-  index_number: string; // JHS/BECE Index Number — the primary identifier
+  jhs_index_number: string; // JHS/BECE Index Number — the primary identifier
   first_name: string;
   middle_name: string | null;
   last_name: string;
@@ -61,15 +61,15 @@ export interface Student {
   previous_school: string | null;
   region: string | null;
   district: string | null;
-  guardian_name: string;
-  guardian_relationship: GuardianRelationship;
-  guardian_phone: string;
-  guardian_alternate_phone: string | null;
-  guardian_email: string | null;
-  guardian_address: string | null;
+  parent_name: string;
+  parent_relationship: GuardianRelationship;
+  parent_phone: string;
+  parent_alt_phone: string | null;
+  parent_email: string | null;
+  parent_address: string | null;
   program_id: string;
   house_id: string | null;
-  boarding_type: BoardingType;
+  student_type: BoardingType;
   academic_year_id: string;
   enrollment_status: EnrollmentStatus;
   created_at: string;
@@ -149,11 +149,11 @@ export interface AuditLog {
 
 export interface StudentFinance {
   student_id: string;
-  index_number: string;
+  jhs_index_number: string;
   full_name: string;
   program_name: string;
   house_name: string | null;
-  boarding_type: BoardingType;
+  student_type: BoardingType;
   academic_year: string;
   photo_path: string | null;
   total_amount_due: number | null;

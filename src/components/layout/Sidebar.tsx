@@ -41,7 +41,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Students",
     href: "/students",
     icon: Users,
-    roles: ["admin"],
+    roles: ["admin", "finance_officer"],
     section: "Students",
   },
   {

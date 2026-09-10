@@ -17,7 +17,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["all"] },
-  { label: "Students", href: "/students", icon: Users, roles: ["admin"] },
+  { label: "Students", href: "/students", icon: Users, roles: ["admin", "finance_officer"] },
   { label: "Enroll Student", href: "/students/enroll", icon: UserPlus, roles: ["admin"] },
   { label: "Student Finance", href: "/finance", icon: DollarSign, roles: ["all"] },
   { label: "Payments", href: "/finance/payments", icon: CreditCard, roles: ["all"] },

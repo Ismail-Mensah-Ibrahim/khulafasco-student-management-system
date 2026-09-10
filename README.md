@@ -99,7 +99,7 @@ The database has already been created. Key tables:
 
 - `academic_years`, `programs`, `houses`
 - `profiles` (staff accounts)
-- `students` (identified by `index_number` — JHS/BECE Index Number)
+- `students` (identified by `jhs_index_number` — JHS/BECE Index Number)
 - `fee_types`, `fee_configurations`, `student_charges`
 - `payments`, `payment_allocations`
 - `audit_logs`
