@@ -23,9 +23,14 @@ export type BoardingType = (typeof BOARDING_TYPES)[number];
 
 export const CURRENT_ACADEMIC_YEAR = "2027/2028";
 
-export const GENDERS = ["Male", "Female"] as const;
+export const GENDERS = ["male", "female"] as const;
 
 export type Gender = (typeof GENDERS)[number];
+
+export const GENDER_LABELS: Record<Gender, string> = {
+  male: "Male",
+  female: "Female",
+};
 
 export const PAYMENT_METHODS = [
   "Cash",
