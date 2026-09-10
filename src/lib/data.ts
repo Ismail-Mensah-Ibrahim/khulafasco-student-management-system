@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { normalizeIndexNumber } from "@/lib/utils";
-import type { AcademicYear, House, Program, Student } from "@/types";
+import {
+  studentFinanceSchema,
+  studentFinancialReconciliationSchema,
+  type StudentFinanceResult,
+  type StudentFinancialReconciliation,
+} from "@/lib/validation/finance";
+import type { AcademicYear, FeeType, House, Program, Student } from "@/types";
 
 export interface DashboardProgramStat {
   name: string;
@@ -44,6 +50,114 @@ export interface StudentPageResult {
   error: string | null;
 }
 
+export type StudentFinanceLookupResult =
+  | { data: StudentFinanceResult; error: null }
+  | { data: null; error: "not_found" | "unauthorized" | "unavailable" | "malformed" };
+
+export type StudentFinancialReconciliationResult =
+  | { data: StudentFinancialReconciliation; error: null }
+  | { data: null; error: "not_found" | "unauthorized" | "unavailable" | "malformed" };
+
+function isStudentNotFoundError(message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+  if (normalizedMessage.startsWith("no student found with jhs/bece index number:")) {
+    return true;
+  }
+
+  return normalizedMessage.includes("student") && (
+    normalizedMessage.includes("not found") ||
+    normalizedMessage.includes("does not exist") ||
+    normalizedMessage.includes("no record")
+  );
+}
+
+function isFinanceUnauthorizedError(code: string | undefined, message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+  return code === "42501" || normalizedMessage.includes("not authorized") || normalizedMessage.includes("unauthorized");
+}
+
+function mapReconciliationError(
+  code: string | undefined,
+  message: string
+): Exclude<StudentFinancialReconciliationResult["error"], null> {
+  if (isFinanceUnauthorizedError(code, message)) return "unauthorized";
+  if (isStudentNotFoundError(message)) return "not_found";
+  return "unavailable";
+}
+
+export async function getStudentFinanceByIndex(
+  rawIndexNumber: string
+): Promise<StudentFinanceLookupResult> {
+  try {
+    const indexNumber = normalizeIndexNumber(rawIndexNumber);
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_student_finance_by_index", {
+      p_jhs_index_number: indexNumber,
+    });
+
+    if (error) {
+      console.error("getStudentFinanceByIndex RPC error:", {
+        code: error.code,
+        message: error.message,
+      });
+      if (isFinanceUnauthorizedError(error.code, error.message)) {
+        return { data: null, error: "unauthorized" };
+      }
+
+      return { data: null, error: isStudentNotFoundError(error.message) ? "not_found" : "unavailable" };
+    }
+
+    if (data === null || data === undefined) {
+      return { data: null, error: "not_found" };
+    }
+
+    const parsed = studentFinanceSchema.safeParse(data);
+    if (!parsed.success) {
+      console.error("getStudentFinanceByIndex malformed RPC response:", parsed.error.issues[0]);
+      return { data: null, error: "malformed" };
+    }
+
+    return { data: parsed.data, error: null };
+  } catch (error) {
+    console.error("getStudentFinanceByIndex unexpected error:", error instanceof Error ? error.message : "Unknown error");
+    return { data: null, error: "unavailable" };
+  }
+}
+
+export async function getStudentFinancialReconciliation(
+  rawIndexNumber: string
+): Promise<StudentFinancialReconciliationResult> {
+  try {
+    const indexNumber = normalizeIndexNumber(rawIndexNumber);
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_student_financial_reconciliation", {
+      p_jhs_index_number: indexNumber,
+    });
+
+    if (error) {
+      console.error("getStudentFinancialReconciliation RPC error:", {
+        code: error.code,
+        message: error.message,
+      });
+      return { data: null, error: mapReconciliationError(error.code, error.message) };
+    }
+
+    const parsed = studentFinancialReconciliationSchema.safeParse(data);
+    if (!parsed.success) {
+      console.error("getStudentFinancialReconciliation malformed RPC response:", parsed.error.issues[0]);
+      return { data: null, error: "malformed" };
+    }
+
+    return { data: parsed.data, error: null };
+  } catch (error) {
+    console.error(
+      "getStudentFinancialReconciliation unexpected error:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
+    return { data: null, error: "unavailable" };
+  }
+}
+
 export async function getAcademicYears(): Promise<AcademicYear[]> {
   const supabase = await createClient();
 
@@ -59,7 +173,7 @@ export async function getAcademicYears(): Promise<AcademicYear[]> {
   return (data ?? []) as AcademicYear[];
 }
 
-export async function getPrograms(): Promise<Program[]> {
+export async function getPrograms(options: { throwOnError?: boolean } = {}): Promise<Program[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -68,6 +182,9 @@ export async function getPrograms(): Promise<Program[]> {
     .order("name", { ascending: true });
 
   if (error) {
+    if (options.throwOnError) {
+      throw new Error("Unable to load programs.");
+    }
     // Log and return an empty list instead of throwing so the dashboard
     // page can render even when a transient DB/storage error occurs.
     // The error is logged for diagnostics.
@@ -78,7 +195,7 @@ export async function getPrograms(): Promise<Program[]> {
   return (data ?? []) as Program[];
 }
 
-export async function getHouses(): Promise<House[]> {
+export async function getHouses(options: { throwOnError?: boolean } = {}): Promise<House[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -87,6 +204,9 @@ export async function getHouses(): Promise<House[]> {
     .order("name", { ascending: true });
 
   if (error) {
+    if (options.throwOnError) {
+      throw new Error("Unable to load houses.");
+    }
     // Log and return an empty list so the dashboard can still render
     // when houses cannot be fetched (transient DB issues).
     // Attempt to stringify the error (handles non-enumerable fields)
@@ -100,6 +220,23 @@ export async function getHouses(): Promise<House[]> {
   }
 
   return (data ?? []) as House[];
+}
+
+export async function getFeeTypes(options: { throwOnError?: boolean } = {}): Promise<FeeType[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("fee_types")
+    .select("*")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error) {
+    if (options.throwOnError) throw new Error("Unable to load fee types.");
+    console.error("getFeeTypes error:", error);
+    return [];
+  }
+
+  return (data ?? []) as FeeType[];
 }
 
 export async function getStudentsPage(filters: StudentQueryFilters = {}): Promise<StudentPageResult> {

@@ -41,6 +41,10 @@ export const PAYMENT_METHODS = [
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
+export const PAYMENT_METHOD_VALUES = ["cash", "mobile_money", "bank_transfer", "other"] as const;
+
+export type PaymentMethodValue = (typeof PAYMENT_METHOD_VALUES)[number];
+
 export const PAYMENT_STATUSES = [
   "not_set",
   "unpaid",
@@ -49,6 +53,10 @@ export const PAYMENT_STATUSES = [
 ] as const;
 
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+export const PAYMENT_TRANSACTION_STATUSES = ["completed", "cancelled", "reversed"] as const;
+
+export type PaymentTransactionStatus = (typeof PAYMENT_TRANSACTION_STATUSES)[number];
 
 export const ROLES = ["admin", "finance_officer"] as const;
 

@@ -9,7 +9,9 @@ import type {
   Gender,
   GuardianRelationship,
   PaymentMethod,
+  PaymentMethodValue,
   PaymentStatus,
+  PaymentTransactionStatus,
   UserRole,
 } from "@/config/constants";
 
@@ -85,6 +87,7 @@ export interface FeeType {
   name: string;
   description: string | null;
   created_at: string;
+  is_active: boolean;
 }
 
 export interface FeeConfiguration {
@@ -122,6 +125,32 @@ export interface Payment {
   recorded_by_profile?: Profile;
 }
 
+export interface RecentPayment {
+  payment_id: string;
+  receipt_number: string;
+  amount: number;
+  payment_method: PaymentMethodValue;
+  reference: string | null;
+  status: PaymentTransactionStatus;
+  notes: string | null;
+  paid_at: string;
+  recorded_by: string;
+}
+
+export interface PaymentRecord {
+  id: string;
+  student_id: string;
+  amount: number;
+  payment_method: PaymentMethodValue;
+  reference: string | null;
+  status: PaymentTransactionStatus;
+  notes: string | null;
+  receipt_number: string | null;
+  recorded_by: string;
+  paid_at: string;
+  created_at: string;
+}
+
 export interface PaymentAllocation {
   id: string;
   payment_id: string;
@@ -148,20 +177,24 @@ export interface AuditLog {
 // ---------------------------------------------------------------------------
 
 export interface StudentFinance {
-  student_id: string;
-  jhs_index_number: string;
-  full_name: string;
-  program_name: string;
-  house_name: string | null;
-  student_type: BoardingType;
-  academic_year: string;
-  photo_path: string | null;
-  total_amount_due: number | null;
-  total_paid: number;
-  outstanding_balance: number;
-  payment_status: PaymentStatus;
-  charges: StudentCharge[];
-  payments: Payment[];
+  student: {
+    id: string;
+    jhs_index_number: string;
+    full_name: string;
+    program_name: string;
+    house_name: string | null;
+    student_type: BoardingType;
+    academic_year: string;
+    photo_path: string | null;
+  };
+  financial: {
+    total_amount_due: number | null;
+    total_paid: number;
+    outstanding_balance: number | null;
+    payment_status: PaymentStatus;
+  };
+  fee_allocations: StudentCharge[];
+  recent_payments: RecentPayment[];
 }
 
 export interface FinancialReconciliation {
