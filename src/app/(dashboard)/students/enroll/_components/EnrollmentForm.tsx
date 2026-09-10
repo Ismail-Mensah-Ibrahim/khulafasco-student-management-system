@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { BOARDING_TYPES, ENROLLMENT_STATUSES, GENDERS, GUARDIAN_RELATIONSHIPS } from "@/config/constants";
+import { BOARDING_TYPES, ENROLLMENT_STATUSES, GENDERS, GENDER_LABELS, GUARDIAN_RELATIONSHIPS } from "@/config/constants";
 import { createStudentAction, type EnrollmentState } from "@/lib/actions/students";
 import { STUDENT_PHOTO_MAX_BYTES, STUDENT_PHOTO_TYPES } from "@/lib/storage/student-photos";
 import type { AcademicYear, House, Program } from "@/types";
@@ -188,7 +188,7 @@ export function EnrollmentForm({ academicYears, programs, houses }: EnrollmentFo
         </div>
       ) : null}
 
-      {state?.success && selectedPhoto && uploadStatus === "idle" ? (
+      {state?.success && selectedPhoto && uploadStatus === "uploading" ? (
         <div role="status" className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
           Student enrolled. Uploading the selected photo...
         </div>
@@ -233,7 +233,7 @@ export function EnrollmentForm({ academicYears, programs, houses }: EnrollmentFo
             label="Gender"
             required
             error={errorFor("gender")}
-            options={GENDERS.map((value) => ({ value, label: value }))}
+            options={GENDERS.map((value) => ({ value, label: GENDER_LABELS[value] }))}
           />
         </div>
       </section>

@@ -6,17 +6,20 @@ import { requireFinanceOrAdmin } from '@/lib/dal';
 import { getStudentByJhsIndexNumber } from '@/lib/data';
 import { formatDate, getFullName } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { GENDER_LABELS } from '@/config/constants';
 
-export async function generateMetadata({ params }: { params: { jhs_index_number: string } }): Promise<Metadata> {
-  const student = await getStudentByJhsIndexNumber(params.jhs_index_number);
+export async function generateMetadata({ params }: { params: Promise<{ jhs_index_number: string }> }): Promise<Metadata> {
+  const { jhs_index_number } = await params;
+  const student = await getStudentByJhsIndexNumber(jhs_index_number);
   return {
     title: student ? `${getFullName(student.first_name, student.middle_name, student.last_name)} | Student` : 'Student',
   };
 }
-export default async function StudentDetailPage({ params }: { params: { jhs_index_number: string } }) {
+export default async function StudentDetailPage({ params }: { params: Promise<{ jhs_index_number: string }> }) {
   await requireFinanceOrAdmin();
 
-  const student = await getStudentByJhsIndexNumber(params.jhs_index_number);
+  const { jhs_index_number } = await params;
+  const student = await getStudentByJhsIndexNumber(jhs_index_number);
   if (!student) return notFound();
 
   return (
@@ -58,7 +61,7 @@ export default async function StudentDetailPage({ params }: { params: { jhs_inde
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Gender</div>
-                <div className="font-medium">{student.gender}</div>
+                <div className="font-medium">{GENDER_LABELS[student.gender]}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Date of birth</div>

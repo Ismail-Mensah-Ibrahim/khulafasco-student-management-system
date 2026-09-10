@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SCHOOL } from "@/config/branding";
+import { GENDER_LABELS } from "@/config/constants";
 import { requireFinanceOrAdmin } from "@/lib/dal";
 import { getAcademicYears, getStudentsPage, getPrograms, getHouses } from "@/lib/data";
 import { formatDate, getFullName } from "@/lib/utils";
@@ -287,7 +288,7 @@ export default async function StudentsPage({
                         {getFullName(student.first_name, student.middle_name, student.last_name)}
                       </div>
                       <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                        {student.gender}
+                        {GENDER_LABELS[student.gender]}
                       </div>
                     </div>
                   ),
