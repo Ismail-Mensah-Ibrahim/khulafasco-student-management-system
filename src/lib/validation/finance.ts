@@ -10,30 +10,24 @@ import {
 
 const nullableNumber = z.number().finite().nullable();
 
-const feeTypeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().nullable(),
-  created_at: z.string(),
-  is_active: z.boolean().optional(),
-});
+const numericStringOrNumber = z.union([
+  z.number().finite(),
+  z.string().trim().regex(/^\d+(\.\d{1,2})?$/, "Enter a valid numeric value.").transform((value) => Number(value)),
+]);
 
-const chargeSchema = z.object({
-  id: z.string(),
-  student_id: z.string(),
-  fee_type_id: z.string(),
-  academic_year_id: z.string(),
-  amount_due: z.number().finite(),
-  amount_paid: z.number().finite(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  fee_type: feeTypeSchema.optional(),
+const rawFeeAllocationSchema = z.object({
+  charge_id: z.string().uuid(),
+  fee_type_id: z.string().uuid(),
+  fee_name: z.string(),
+  amount_due: numericStringOrNumber,
+  amount_paid: numericStringOrNumber,
+  balance: numericStringOrNumber,
 });
 
 const paymentSchema = z.object({
   payment_id: z.string(),
   receipt_number: z.string(),
-  amount: z.number().finite(),
+  amount: numericStringOrNumber,
   payment_method: z.enum(PAYMENT_METHOD_VALUES),
   reference: z.string().nullable(),
   status: z.enum(PAYMENT_TRANSACTION_STATUSES),
@@ -74,7 +68,7 @@ export const studentFinanceSchema = z.object({
     outstanding_balance: z.number().finite().nullable(),
     payment_status: z.enum(PAYMENT_STATUSES),
   }),
-  fee_allocations: z.array(chargeSchema),
+  fee_allocations: z.array(rawFeeAllocationSchema),
   recent_payments: z.array(paymentSchema),
 });
 
@@ -113,7 +107,7 @@ export const recordStudentPaymentSchema = z
 export const paymentRecordSchema = z.object({
   id: z.string(),
   student_id: z.string(),
-  amount: z.number().finite(),
+  amount: numericStringOrNumber,
   payment_method: z.enum(PAYMENT_METHOD_VALUES),
   reference: z.string().nullable(),
   status: z.enum(PAYMENT_TRANSACTION_STATUSES),
@@ -146,12 +140,14 @@ export const setStudentAmountDueSchema = z.object({
 });
 
 export const studentChargeMutationResultSchema = z.object({
-  id: z.string(),
-  student_id: z.string(),
-  fee_type_id: z.string(),
-  academic_year_id: z.string(),
-  amount_due: z.number().finite(),
-  amount_paid: z.number().finite(),
+  id: z.string().uuid(),
+  student_id: z.string().uuid(),
+  fee_type_id: z.string().uuid(),
+  academic_year_id: z.string().uuid(),
+  amount: numericStringOrNumber,
+  description: z.string().nullable(),
+  created_by: z.string().uuid().nullable(),
+  created_at: z.string(),
 });
 
 export const studentFinancialReconciliationSchema = z.object({

@@ -21,7 +21,7 @@ export const BOARDING_TYPES = ["boarding", "day"] as const;
 
 export type BoardingType = (typeof BOARDING_TYPES)[number];
 
-export const CURRENT_ACADEMIC_YEAR = "2027/2028";
+export const CURRENT_ACADEMIC_YEAR = "2026/2027";
 
 export const GENDERS = ["male", "female"] as const;
 

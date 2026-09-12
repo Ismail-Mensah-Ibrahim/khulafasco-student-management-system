@@ -79,11 +79,28 @@ export async function createStudentAction(
 
   const values: StudentEnrollmentValues = parsed.data;
   const supabase = await createClient();
-  const { data: student, error } = await supabase
-    .from("students")
-    .insert(values)
-    .select("id")
-    .single();
+  const { data: student, error } = await supabase.rpc("enroll_student", {
+    p_jhs_index_number: values.jhs_index_number,
+    p_first_name: values.first_name,
+    p_middle_name: values.middle_name,
+    p_last_name: values.last_name,
+    p_gender: values.gender,
+    p_date_of_birth: values.date_of_birth,
+    p_previous_school: values.previous_school,
+    p_region: values.region,
+    p_district: values.district,
+    p_parent_name: values.parent_name,
+    p_parent_relationship: values.parent_relationship,
+    p_parent_phone: values.parent_phone,
+    p_parent_alt_phone: values.parent_alt_phone,
+    p_parent_email: values.parent_email,
+    p_parent_address: values.parent_address,
+    p_program_id: values.program_id,
+    p_house_id: values.house_id,
+    p_student_type: values.student_type,
+    p_academic_year_id: values.academic_year_id,
+    p_photo_path: null,
+  });
 
   if (error) {
     return {

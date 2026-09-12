@@ -59,10 +59,10 @@ export function PaymentForm({ student, financial, fee_allocations }: PaymentForm
   const refreshRequested = useRef(false);
   const fieldErrors = state && !state.success ? state.fieldErrors ?? {} : {};
   const amountCents = parseCents(amount);
-  const allocationCents = fee_allocations.reduce((total, charge) => total + parseCents(allocations[charge.id] ?? ""), 0);
+  const allocationCents = fee_allocations.reduce((total, charge) => total + parseCents(allocations[charge.charge_id] ?? ""), 0);
   const allocationPayload = fee_allocations
-    .filter((charge) => (allocations[charge.id] ?? "").trim() !== "")
-    .map((charge) => ({ charge_id: charge.id, amount: Number(allocations[charge.id]) }));
+    .filter((charge) => (allocations[charge.charge_id] ?? "").trim() !== "")
+    .map((charge) => ({ charge_id: charge.charge_id, amount: Number(allocations[charge.charge_id]) }));
   const hasAllocatableCharges = fee_allocations.some((charge) => charge.amount_due > charge.amount_paid);
 
   useEffect(() => {
@@ -153,27 +153,27 @@ export function PaymentForm({ student, financial, fee_allocations }: PaymentForm
                 const remaining = Math.max(charge.amount_due - charge.amount_paid, 0);
                 const disabled = remaining <= 0;
                 return (
-                  <div key={charge.id} className="grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_auto_10rem] md:items-end" style={{ borderColor: "var(--border)" }}>
+                  <div key={charge.charge_id} className="grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_auto_10rem] md:items-end" style={{ borderColor: "var(--border)" }}>
                     <div>
-                      <p className="font-medium">{charge.fee_type?.name ?? "Fee charge"}</p>
+                      <p className="font-medium">{charge.fee_name}</p>
                       <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
                         Due {formatCurrency(charge.amount_due)} | Paid {formatCurrency(charge.amount_paid)} | Remaining {formatCurrency(remaining)}
                       </p>
                     </div>
                     <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>{disabled ? "Fully paid" : "Outstanding"}</div>
                     <div className="space-y-2">
-                      <Label htmlFor={`allocation-${charge.id}`}>Allocation</Label>
+                      <Label htmlFor={`allocation-${charge.charge_id}`}>Allocation</Label>
                       <Input
-                        id={`allocation-${charge.id}`}
+                        id={`allocation-${charge.charge_id}`}
                         type="number"
                         min="0"
                         max={remaining.toFixed(2)}
                         step="0.01"
                         inputMode="decimal"
                         disabled={disabled}
-                        value={allocations[charge.id] ?? ""}
-                        onChange={(event) => updateAllocation(charge.id, event.target.value)}
-                        aria-label={`Allocation for ${charge.fee_type?.name ?? "fee charge"}`}
+                        value={allocations[charge.charge_id] ?? ""}
+                        onChange={(event) => updateAllocation(charge.charge_id, event.target.value)}
+                        aria-label={`Allocation for ${charge.fee_name}`}
                       />
                     </div>
                   </div>

@@ -43,7 +43,7 @@ export function DataTable<T>({
 
   return (
     <div className={cn("rounded-xl overflow-hidden", className)}
-      style={{ border: "1px solid var(--border)" }}>
+      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}>
       {/* Desktop table */}
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm">
@@ -53,7 +53,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   className={cn(
-                    "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide",
+                    "px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em]",
                     col.headerClassName
                   )}
                   style={{ color: "var(--muted-foreground)" }}
@@ -71,12 +71,12 @@ export function DataTable<T>({
                   background: "var(--surface)",
                   borderBottom: i < data.length - 1 ? "1px solid var(--border)" : undefined,
                 }}
-                className="transition-colors hover:bg-[var(--muted)]"
+                className="transition-colors hover:bg-[var(--muted)] align-top"
               >
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className={cn("px-4 py-3", col.className)}
+                    className={cn("px-4 py-3 align-top", col.className)}
                     style={{ color: "var(--foreground)" }}
                   >
                     {col.cell(row)}
@@ -99,7 +99,7 @@ export function DataTable<T>({
             {columns.map((col) => (
               <div key={col.key} className="flex justify-between items-start gap-2">
                 <span
-                  className="text-xs font-semibold uppercase tracking-wide flex-shrink-0"
+                  className="text-[11px] font-semibold uppercase tracking-wide flex-shrink-0"
                   style={{ color: "var(--muted-foreground)" }}
                 >
                   {col.header}

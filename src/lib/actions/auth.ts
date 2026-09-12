@@ -97,7 +97,11 @@ export async function loginAction(
     };
   }
 
-  // 4. Success — redirect to dashboard
+  // 4. Success — redirect by role to the correct operational dashboard
+  if (profile.role === "finance_officer") {
+    redirect("/finance");
+  }
+
   redirect("/dashboard");
 }
 

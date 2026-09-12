@@ -3,6 +3,7 @@ import { ShieldCheck } from "lucide-react";
 import { SCHOOL } from "@/config/branding";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { requireAdmin } from "@/lib/dal";
+import { StaffCreateForm } from "../_components/AdminCreateForms";
 
 export const metadata: Metadata = {
   title: `Staff Access | ${SCHOOL.shortName}`,
@@ -58,6 +59,10 @@ export default async function StaffAccessPage() {
           >
             Signed in as <span className="font-semibold" style={{ color: "var(--foreground)" }}>{session.fullName}</span>
           </div>
+        </div>
+
+        <div className="mt-6">
+          <StaffCreateForm />
         </div>
       </section>
     </div>

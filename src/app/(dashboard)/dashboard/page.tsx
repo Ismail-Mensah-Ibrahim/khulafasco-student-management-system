@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { SCHOOL } from "@/config/branding";
 import { verifySession } from "@/lib/dal";
-import { getDashboardSummary } from "@/lib/data";
+import { getDashboardSummary, getFinanceDashboardMetrics } from "@/lib/data";
+import { formatCurrency } from "@/lib/utils";
 import {
   Users,
   GraduationCap,
@@ -19,11 +20,65 @@ export const metadata: Metadata = {
 
 /**
  * Dashboard visual shell.
- * Real data will be wired from Supabase in Milestone 3.
+ * Admin receives an administration overview. Finance Officers receive a
+ * finance-focused dashboard experience through the same route.
  */
 export default async function DashboardPage() {
   const session = await verifySession();
-  const summary = await getDashboardSummary();
+
+  if (session.role === "finance_officer") {
+    const metrics = await getFinanceDashboardMetrics();
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)", fontFamily: "Georgia, serif" }}>
+            Finance Dashboard
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+            Welcome back, <strong>{session.fullName}</strong>. Today’s student finance operations.
+          </p>
+        </div>
+
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Total Students" value={String(metrics.totalStudents)} icon={Users} color="var(--brand-primary)" bg="var(--brand-accent)" />
+          <StatCard label="Amount Due" value={formatCurrency(metrics.amountDue)} icon={DollarSign} color="var(--brand-primary)" bg="var(--brand-accent)" prefix="GH₵" />
+          <StatCard label="Total Collected" value={formatCurrency(metrics.totalCollected)} icon={TrendingUp} color="var(--success)" bg="var(--success-light)" prefix="GH₵" />
+          <StatCard label="Outstanding Balance" value={formatCurrency(metrics.outstandingBalance)} icon={AlertCircle} color="var(--warning)" bg="var(--warning-light)" prefix="GH₵" />
+        </section>
+
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Fully Paid" value={String(metrics.fullyPaid)} icon={CheckCircle2} color="var(--success)" bg="var(--success-light)" />
+          <StatCard label="Partially Paid" value={String(metrics.partiallyPaid)} icon={TrendingUp} color="var(--warning)" bg="var(--warning-light)" />
+          <StatCard label="Unpaid" value={String(metrics.unpaid)} icon={AlertCircle} color="var(--destructive)" bg="var(--destructive-light)" />
+          <StatCard label="Not Set" value={String(metrics.notSet)} icon={DollarSign} color="var(--border)" bg="var(--muted)" />
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
+            <h3 className="font-semibold text-sm mb-4" style={{ color: "var(--foreground)" }}>Finance Attention</h3>
+            <div className="space-y-3">
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Amount Due Not Set: {metrics.notSet}</p>
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Outstanding Balance: {formatCurrency(metrics.outstandingBalance)}</p>
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Partially Paid: {metrics.partiallyPaid}</p>
+            </div>
+          </div>
+          <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
+            <h3 className="font-semibold text-sm mb-4" style={{ color: "var(--foreground)" }}>Today’s Activity</h3>
+            <div className="space-y-3">
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Payments recorded today: {metrics.todayPaymentCount}</p>
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Amount collected today: {formatCurrency(metrics.todayCollected)}</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  const [summary, metrics] = await Promise.all([
+    getDashboardSummary(),
+    getFinanceDashboardMetrics(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -87,7 +142,7 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Total Expected"
-            value="—"
+            value={formatCurrency(metrics.amountDue)}
             icon={DollarSign}
             color="var(--brand-primary)"
             bg="var(--brand-accent)"
@@ -95,7 +150,7 @@ export default async function DashboardPage() {
           />
           <StatCard
             label="Total Collected"
-            value="—"
+            value={formatCurrency(metrics.totalCollected)}
             icon={TrendingUp}
             color="var(--success)"
             bg="var(--success-light)"
@@ -103,7 +158,7 @@ export default async function DashboardPage() {
           />
           <StatCard
             label="Outstanding"
-            value="—"
+            value={formatCurrency(metrics.outstandingBalance)}
             icon={AlertCircle}
             color="var(--warning)"
             bg="var(--warning-light)"
@@ -111,7 +166,7 @@ export default async function DashboardPage() {
           />
           <StatCard
             label="Fully Paid"
-            value="—"
+            value={String(metrics.fullyPaid)}
             icon={CheckCircle2}
             color="var(--success)"
             bg="var(--success-light)"

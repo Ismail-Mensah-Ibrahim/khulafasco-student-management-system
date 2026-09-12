@@ -29,15 +29,15 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <div
-      className={cn("rounded-xl p-4 flex flex-col gap-3", className)}
+      className={cn("rounded-xl p-4 flex min-h-[132px] flex-col justify-between gap-3", className)}
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
         boxShadow: "var(--shadow-sm)",
       }}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>
           {label}
         </span>
         {icon && (
@@ -50,8 +50,8 @@ export function StatCard({
         )}
       </div>
 
-      <div>
-        <p className="text-2xl font-bold tabular-nums leading-none"
+      <div className="space-y-1">
+        <p className="text-2xl md:text-3xl font-black tabular-nums leading-none"
           style={{ color: "var(--foreground)" }}>
           {prefix}<span>{value}</span>{suffix}
         </p>
