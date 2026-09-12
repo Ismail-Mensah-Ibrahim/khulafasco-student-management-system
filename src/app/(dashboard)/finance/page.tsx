@@ -71,20 +71,14 @@ export default async function FinancePage({
   const reconciliation = indexNumber && !invalidIndex ? await getStudentFinancialReconciliation(indexNumber) : null;
   const finance = lookup && !lookup.error ? lookup.data : null;
   let referenceData: Awaited<ReturnType<typeof Promise.all<[ReturnType<typeof getPrograms>, ReturnType<typeof getHouses>, ReturnType<typeof getAcademicYears>, ReturnType<typeof getFeeTypes>]>>> | null = null;
-  let referenceDataError = false;
 
   if (finance) {
-    try {
-      referenceData = await Promise.all([
-        getPrograms({ throwOnError: true }),
-        getHouses({ throwOnError: true }),
-        getAcademicYears(),
-        getFeeTypes({ throwOnError: true }),
-      ]);
-    } catch (error) {
-      console.error("Finance reference data error:", error instanceof Error ? error.message : "Unknown error");
-      referenceDataError = true;
-    }
+    referenceData = await Promise.all([
+      getPrograms(),
+      getHouses(),
+      getAcademicYears(),
+      getFeeTypes(),
+    ]);
   }
 
   const [programs, houses, academicYears, feeTypes] = referenceData ?? [[], [], [], []];
@@ -180,9 +174,6 @@ export default async function FinancePage({
               <div><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>House</p><p className="font-medium">{houseName}</p></div>
               <div><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Student type</p><p className="font-medium">{lookup.data.student.student_type === "boarding" ? "Boarding" : "Day"}</p></div>
             </div>
-            {referenceDataError ? (
-              <p role="alert" className="mt-4 text-sm text-amber-700">Some reference details are temporarily unavailable. Financial values below remain from the authoritative finance service.</p>
-            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -214,8 +205,8 @@ export default async function FinancePage({
             ) : (
               <div className="space-y-3">
                 {lookup.data.fee_allocations.map((charge) => (
-                  <div key={charge.id} className="flex flex-col gap-1 border-b pb-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
-                    <div><p className="font-medium">{charge.fee_type?.name ?? "Fee charge"}</p><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{formatAmount(charge.amount_paid)} paid</p></div>
+                  <div key={charge.charge_id} className="flex flex-col gap-1 border-b pb-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
+                    <div><p className="font-medium">{charge.fee_name}</p><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{formatAmount(charge.amount_paid)} paid</p></div>
                     <p className="font-semibold">{formatAmount(charge.amount_due)}</p>
                   </div>
                 ))}

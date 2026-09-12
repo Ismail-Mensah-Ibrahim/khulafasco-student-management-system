@@ -104,11 +104,10 @@ export interface StudentCharge {
   student_id: string;
   fee_type_id: string;
   academic_year_id: string;
-  amount_due: number;
-  amount_paid: number;
+  amount: number;
+  description: string | null;
+  created_by: string | null;
   created_at: string;
-  updated_at: string;
-  fee_type?: FeeType;
 }
 
 export interface Payment {
@@ -164,10 +163,9 @@ export interface AuditLog {
   id: string;
   user_id: string;
   action: string;
-  table_name: string;
-  record_id: string | null;
-  old_data: Record<string, unknown> | null;
-  new_data: Record<string, unknown> | null;
+  entity_type: string;
+  entity_id: string | null;
+  description: string | null;
   created_at: string;
   profile?: Profile;
 }

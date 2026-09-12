@@ -9,7 +9,7 @@ import {
   type StudentFinanceResult,
   type StudentFinancialReconciliation,
 } from "@/lib/validation/finance";
-import type { AcademicYear, FeeType, House, Program, Student } from "@/types";
+import type { AcademicYear, AuditLog, FeeType, House, Program, Student } from "@/types";
 
 export interface DashboardProgramStat {
   name: string;
@@ -31,6 +31,19 @@ export interface DashboardSummary {
   currentAcademicYear: AcademicYear | null;
   programStats: DashboardProgramStat[];
   houseStats: DashboardHouseStat[];
+}
+
+export interface FinanceDashboardMetrics {
+  totalStudents: number;
+  amountDue: number;
+  totalCollected: number;
+  outstandingBalance: number;
+  fullyPaid: number;
+  partiallyPaid: number;
+  unpaid: number;
+  notSet: number;
+  todayPaymentCount: number;
+  todayCollected: number;
 }
 
 export interface StudentQueryFilters {
@@ -285,6 +298,26 @@ export async function getFeeTypes(options: { throwOnError?: boolean } = {}): Pro
   return (data ?? []) as FeeType[];
 }
 
+export async function getAuditLogs(options: { throwOnError?: boolean } = {}): Promise<AuditLog[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("id, user_id, action, entity_type, entity_id, description, created_at")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    if (options.throwOnError) {
+      throw new Error("Unable to load audit logs.");
+    }
+    console.error("getAuditLogs error:", error);
+    return [] as AuditLog[];
+  }
+
+  return (data ?? []) as AuditLog[];
+}
+
 export async function getStudentsPage(filters: StudentQueryFilters = {}): Promise<StudentPageResult> {
   const supabase = await createClient();
   const pageSize = filters.pageSize ?? 25;
@@ -432,6 +465,113 @@ async function countStudents(filters: {
   }
 
   return count ?? 0;
+}
+
+export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetrics> {
+  const supabase = await createClient();
+  const academicYears = await getAcademicYears();
+  const currentAcademicYear = academicYears.find((year) => year.is_current) ?? academicYears[0] ?? null;
+
+  const studentQuery = supabase
+    .from("students")
+    .select("id, total_amount_due, academic_year_id")
+    .order("created_at", { ascending: false });
+
+  if (currentAcademicYear?.id) {
+    studentQuery.eq("academic_year_id", currentAcademicYear.id);
+  }
+
+  const [studentsResult, paymentsResult] = await Promise.allSettled([
+    studentQuery,
+    supabase.from("payments").select("student_id, amount, paid_at, status").order("paid_at", { ascending: false }),
+  ]);
+
+  const studentsQuery = studentsResult.status === "fulfilled" ? studentsResult.value : null;
+  const paymentsQuery = paymentsResult.status === "fulfilled" ? paymentsResult.value : null;
+
+  if (studentsQuery?.error) {
+    console.warn("getFinanceDashboardMetrics students query failed", {
+      code: studentsQuery.error.code,
+      message: studentsQuery.error.message,
+      details: studentsQuery.error.details,
+      hint: studentsQuery.error.hint,
+    });
+  }
+
+  if (paymentsQuery?.error) {
+    console.warn("getFinanceDashboardMetrics payments query failed", {
+      code: paymentsQuery.error.code,
+      message: paymentsQuery.error.message,
+      details: paymentsQuery.error.details,
+      hint: paymentsQuery.error.hint,
+    });
+  }
+
+  const studentRows = studentsQuery?.data ?? [];
+  const paymentRows = paymentsQuery?.data ?? [];
+
+  const totalStudents = studentRows.length;
+  let amountDue = 0;
+  let totalCollected = 0;
+  let outstandingBalance = 0;
+  let fullyPaid = 0;
+  let partiallyPaid = 0;
+  let unpaid = 0;
+  let notSet = 0;
+
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
+  const endTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0).toISOString();
+
+  const studentPaid = new Map<string, number>();
+
+  for (const payment of paymentRows.filter((row: { status?: string; student_id?: string; amount?: number | string; paid_at?: string }) => row.status === "completed")) {
+    const studentId = payment.student_id as string;
+    const amount = Number(payment.amount ?? 0);
+    totalCollected += amount;
+
+    studentPaid.set(studentId, (studentPaid.get(studentId) ?? 0) + amount);
+  }
+
+  for (const student of studentRows) {
+    const due = student.total_amount_due == null ? null : Number(student.total_amount_due);
+    const paid = studentPaid.get(student.id) ?? 0;
+
+    if (due === null) {
+      notSet += 1;
+      continue;
+    }
+
+    amountDue += due;
+    const outstanding = Math.max(due - paid, 0);
+    outstandingBalance += outstanding;
+
+    if (paid === 0) {
+      unpaid += 1;
+    } else if (paid >= due) {
+      fullyPaid += 1;
+    } else {
+      partiallyPaid += 1;
+    }
+  }
+
+  const todayPaymentCount = paymentRows.filter((row: { status?: string; paid_at?: string }) => row.status === "completed" && row.paid_at && row.paid_at >= startToday && row.paid_at < endTomorrow).length;
+  const todayCollected = paymentRows
+    .filter((row: { status?: string; paid_at?: string; amount?: number | string }) => row.status === "completed" && row.paid_at && row.paid_at >= startToday && row.paid_at < endTomorrow)
+    .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+
+  return {
+    totalStudents,
+    amountDue,
+    totalCollected,
+    outstandingBalance,
+    fullyPaid,
+    partiallyPaid,
+    unpaid,
+    notSet,
+    todayPaymentCount,
+    todayCollected,
+  };
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {

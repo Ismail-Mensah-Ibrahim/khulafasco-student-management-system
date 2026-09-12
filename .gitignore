@@ -44,4 +44,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-# Editor snapshots history\n.history
+
+# Editor snapshots history
+.history/
+
+# VS Code editor metadata
+.vscode/
