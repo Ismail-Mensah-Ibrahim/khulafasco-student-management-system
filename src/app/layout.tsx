@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono, Geist } from "next/font/google";
 import "./globals.css";
 import { SCHOOL } from "@/config/branding";
@@ -18,14 +18,36 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#6B1A2A",
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: {
-    default: SCHOOL.shortName,
+    default: `${SCHOOL.shortName} | Student Management System`,
     template: `%s | ${SCHOOL.shortName}`,
   },
   description: `Student Enrollment & Fee Management System for ${SCHOOL.name}`,
+  applicationName: SCHOOL.shortName,
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/school-logo.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/school-logo.png", sizes: "any", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: SCHOOL.shortName,
   },
 };
 

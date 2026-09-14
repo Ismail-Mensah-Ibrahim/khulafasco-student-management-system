@@ -186,13 +186,83 @@ export default async function PaymentsPage({ searchParams }: { searchParams?: Pr
         <section className="space-y-4">
           <DataTable
             columns={[
-              { key: "receipt", header: "Receipt", cell: (payment: PaymentItem) => payment.receipt_number ?? "—" },
-              { key: "student", header: "Student", cell: (payment: PaymentItem) => <div><p className="font-medium">{getFullName(payment.student.first_name, payment.student.middle_name, payment.student.last_name)}</p><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{payment.student.jhs_index_number}</p></div> },
-              { key: "amount", header: "Amount", cell: (payment: PaymentItem) => <span className="font-semibold">{formatCurrency(payment.amount)}</span> },
-              { key: "method", header: "Method", cell: (payment: PaymentItem) => PAYMENT_METHOD_LABELS[payment.payment_method] },
-              { key: "reference", header: "Reference", cell: (payment: PaymentItem) => payment.reference ?? "—" },
-              { key: "status", header: "Status", cell: (payment: PaymentItem) => <StatusBadge status={payment.status} /> },
-              { key: "paid_at", header: "Paid At", cell: (payment: PaymentItem) => formatPaidAt(payment.paid_at) },
+              {
+                key: "receipt",
+                header: "Receipt #",
+                cell: (payment: PaymentItem) =>
+                  payment.receipt_number ? (
+                    <span
+                      className="font-mono text-xs font-semibold px-2 py-0.5 rounded border"
+                      style={{
+                        background: "var(--muted)",
+                        borderColor: "var(--border)",
+                        color: "var(--brand-primary)",
+                      }}
+                    >
+                      {payment.receipt_number}
+                    </span>
+                  ) : (
+                    <span style={{ color: "var(--muted-foreground)" }}>—</span>
+                  ),
+              },
+              {
+                key: "student",
+                header: "Student",
+                cell: (payment: PaymentItem) => (
+                  <Link
+                    href={`/finance?index=${encodeURIComponent(payment.student.jhs_index_number)}`}
+                    className="group block"
+                  >
+                    <p className="font-semibold text-sm group-hover:underline" style={{ color: "var(--foreground)" }}>
+                      {getFullName(payment.student.first_name, payment.student.middle_name, payment.student.last_name)}
+                    </p>
+                    <p className="font-mono text-xs" style={{ color: "var(--muted-foreground)" }}>
+                      {payment.student.jhs_index_number}
+                    </p>
+                  </Link>
+                ),
+              },
+              {
+                key: "amount",
+                header: "Amount",
+                cell: (payment: PaymentItem) => (
+                  <span className="font-bold text-sm tabular-nums" style={{ color: "var(--foreground)" }}>
+                    {formatCurrency(payment.amount)}
+                  </span>
+                ),
+              },
+              {
+                key: "method",
+                header: "Method",
+                cell: (payment: PaymentItem) => (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded border" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+                    {PAYMENT_METHOD_LABELS[payment.payment_method]}
+                  </span>
+                ),
+              },
+              {
+                key: "reference",
+                header: "Reference",
+                cell: (payment: PaymentItem) => (
+                  <span className="font-mono text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    {payment.reference ?? "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "status",
+                header: "Status",
+                cell: (payment: PaymentItem) => <StatusBadge status={payment.status} />,
+              },
+              {
+                key: "paid_at",
+                header: "Payment Date",
+                cell: (payment: PaymentItem) => (
+                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    {formatPaidAt(payment.paid_at)}
+                  </span>
+                ),
+              },
             ]}
             data={result.data.items}
             keyField="id"

@@ -187,12 +187,74 @@ export default async function ReceiptsPage({ searchParams }: { searchParams?: Pr
         <section className="space-y-4">
           <DataTable
             columns={[
-              { key: "receipt", header: "Receipt Number", cell: (receipt: ReceiptItem) => receipt.receipt_number ?? "—" },
-              { key: "student", header: "Student", cell: (receipt: ReceiptItem) => <div><p className="font-medium">{getFullName(receipt.student.first_name, receipt.student.middle_name, receipt.student.last_name)}</p><p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{receipt.student.jhs_index_number}</p></div> },
-              { key: "amount", header: "Amount", cell: (receipt: ReceiptItem) => <span className="font-semibold">{formatCurrency(receipt.amount)}</span> },
-              { key: "method", header: "Payment Method", cell: (receipt: ReceiptItem) => PAYMENT_METHOD_LABELS[receipt.payment_method] },
-              { key: "status", header: "Status", cell: (receipt: ReceiptItem) => <StatusBadge status={receipt.status} /> },
-              { key: "paid_at", header: "Paid At", cell: (receipt: ReceiptItem) => formatPaidAt(receipt.paid_at) },
+              {
+                key: "receipt",
+                header: "Receipt #",
+                cell: (receipt: ReceiptItem) =>
+                  receipt.receipt_number ? (
+                    <span
+                      className="font-mono text-xs font-semibold px-2 py-0.5 rounded border"
+                      style={{
+                        background: "var(--muted)",
+                        borderColor: "var(--border)",
+                        color: "var(--brand-primary)",
+                      }}
+                    >
+                      {receipt.receipt_number}
+                    </span>
+                  ) : (
+                    <span style={{ color: "var(--muted-foreground)" }}>—</span>
+                  ),
+              },
+              {
+                key: "student",
+                header: "Student",
+                cell: (receipt: ReceiptItem) => (
+                  <Link
+                    href={`/finance?index=${encodeURIComponent(receipt.student.jhs_index_number)}`}
+                    className="group block"
+                  >
+                    <p className="font-semibold text-sm group-hover:underline" style={{ color: "var(--foreground)" }}>
+                      {getFullName(receipt.student.first_name, receipt.student.middle_name, receipt.student.last_name)}
+                    </p>
+                    <p className="font-mono text-xs" style={{ color: "var(--muted-foreground)" }}>
+                      {receipt.student.jhs_index_number}
+                    </p>
+                  </Link>
+                ),
+              },
+              {
+                key: "amount",
+                header: "Amount",
+                cell: (receipt: ReceiptItem) => (
+                  <span className="font-bold text-sm tabular-nums" style={{ color: "var(--foreground)" }}>
+                    {formatCurrency(receipt.amount)}
+                  </span>
+                ),
+              },
+              {
+                key: "method",
+                header: "Payment Method",
+                cell: (receipt: ReceiptItem) => (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded border" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+                    {PAYMENT_METHOD_LABELS[receipt.payment_method]}
+                  </span>
+                ),
+              },
+              {
+                key: "status",
+                header: "Status",
+                cell: (receipt: ReceiptItem) => <StatusBadge status={receipt.status} />,
+              },
+              {
+                key: "paid_at",
+                header: "Issue Date",
+                cell: (receipt: ReceiptItem) => (
+                  <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    {formatPaidAt(receipt.paid_at)}
+                  </span>
+                ),
+              },
             ]}
             data={result.data.items}
             keyField="id"

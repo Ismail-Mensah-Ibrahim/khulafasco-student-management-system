@@ -1,0 +1,23 @@
+{
+  "name": "Alkhulafau Arrashiduun Islamic Senior High School",
+  "short_name": "Khulafasco",
+  "description": "Student Enrollment & Fee Management System for Khulafasco",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#3D0D17",
+  "theme_color": "#6B1A2A",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

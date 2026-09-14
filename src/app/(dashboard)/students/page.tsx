@@ -8,7 +8,7 @@ import { SCHOOL } from "@/config/branding";
 import { GENDER_LABELS } from "@/config/constants";
 import { requireFinanceOrAdmin } from "@/lib/dal";
 import { getAcademicYears, getStudentsPage, getPrograms, getHouses } from "@/lib/data";
-import { formatDate, getFullName } from "@/lib/utils";
+import { getFullName } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: `Students | ${SCHOOL.shortName}`,
@@ -86,7 +86,7 @@ export default async function StudentsPage({
     <div className="space-y-6">
       <PageHeader
         title="Students"
-        description="Directory of student records with search, filtering, and pagination powered by Supabase."
+        description="Search, filter, and manage institutional student records and enrollments."
       />
 
       <section
@@ -264,31 +264,46 @@ export default async function StudentsPage({
             <DataTable
               data={students}
               keyField="id"
-              emptyMessage="No student records were returned from Supabase."
+              emptyMessage="No student records found matching your criteria."
               columns={[
                 {
                   key: "jhs_index_number",
-                  header: "Index",
+                  header: "Index Number",
                   cell: (student) => (
-                    <Link
-                      href={`/students/${student.jhs_index_number}`}
-                      className="font-medium underline-offset-4 hover:underline"
-                      style={{ color: "var(--foreground)" }}
+                    <span
+                      className="font-mono text-xs font-semibold px-2 py-1 rounded border"
+                      style={{
+                        background: "var(--muted)",
+                        borderColor: "var(--border)",
+                        color: "var(--foreground)",
+                      }}
                     >
                       {student.jhs_index_number}
-                    </Link>
+                    </span>
                   ),
                 },
                 {
                   key: "name",
                   header: "Student",
                   cell: (student) => (
-                    <div className="space-y-0.5">
-                      <div className="font-semibold" style={{ color: "var(--foreground)" }}>
-                        {getFullName(student.first_name, student.middle_name, student.last_name)}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{
+                          background: "var(--brand-accent)",
+                          color: "var(--brand-primary)",
+                        }}
+                      >
+                        {student.first_name[0]}
+                        {student.last_name[0]}
                       </div>
-                      <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                        {GENDER_LABELS[student.gender]}
+                      <div className="space-y-0.5">
+                        <div className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>
+                          {getFullName(student.first_name, student.middle_name, student.last_name)}
+                        </div>
+                        <div className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                          {GENDER_LABELS[student.gender]} · <span className="capitalize">{student.student_type}</span>
+                        </div>
                       </div>
                     </div>
                   ),
@@ -296,29 +311,41 @@ export default async function StudentsPage({
                 {
                   key: "program_id",
                   header: "Program",
-                  cell: (student) => student.program?.name ?? student.program_id ?? "—",
+                  cell: (student) => (
+                    <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                      {student.program?.name ?? student.program_id ?? "—"}
+                    </span>
+                  ),
                 },
                 {
                   key: "house_id",
                   header: "House",
-                  cell: (student) => student.house?.name ?? student.house_id ?? "—",
-                },
-                {
-                  key: "date_of_birth",
-                  header: "DOB",
-                  cell: (student) => formatDate(student.date_of_birth),
+                  cell: (student) => (
+                    <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+                      {student.house?.name ?? student.house_id ?? "—"}
+                    </span>
+                  ),
                 },
                 {
                   key: "parent_name",
-                  header: "Parent",
-                  cell: (student) => student.parent_name,
+                  header: "Parent / Contact",
+                  cell: (student) => (
+                    <div className="space-y-0.5 text-xs">
+                      <div className="font-medium" style={{ color: "var(--foreground)" }}>
+                        {student.parent_name}
+                      </div>
+                      <div style={{ color: "var(--muted-foreground)" }}>
+                        {student.parent_phone}
+                      </div>
+                    </div>
+                  ),
                 },
                 {
                   key: "enrollment_status",
                   header: "Status",
                   cell: (student) => (
                     <span
-                      className="inline-flex rounded-full px-2 py-1 text-xs font-medium"
+                      className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize"
                       style={{
                         background: student.enrollment_status === "active" ? "var(--success-light)" : "var(--muted)",
                         color: student.enrollment_status === "active" ? "var(--success)" : "var(--muted-foreground)",
@@ -326,6 +353,23 @@ export default async function StudentsPage({
                     >
                       {student.enrollment_status}
                     </span>
+                  ),
+                },
+                {
+                  key: "actions",
+                  header: "Action",
+                  cell: (student) => (
+                    <Link
+                      href={`/students/${student.jhs_index_number}`}
+                      className="inline-flex items-center justify-center rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                      style={{
+                        borderColor: "var(--border)",
+                        background: "var(--surface)",
+                        color: "var(--brand-primary)",
+                      }}
+                    >
+                      View Record
+                    </Link>
                   ),
                 },
               ]}

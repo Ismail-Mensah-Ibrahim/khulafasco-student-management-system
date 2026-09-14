@@ -17,7 +17,7 @@ export default async function FeeTypesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Fee Types" description="Current active fee-type catalog published in Supabase." />
+      <PageHeader title="Fee Types" description="Institutional fee structures and charges catalog." />
 
       <section className="rounded-xl border p-4 md:p-6" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-sm)" }}>
         <div className="mb-4 flex items-center gap-3">
@@ -37,7 +37,7 @@ export default async function FeeTypesPage() {
         <DataTable
           data={feeTypes}
           keyField="id"
-          emptyMessage="No active fee types were returned from Supabase."
+          emptyMessage="No active fee types found."
           columns={[
             { key: "name", header: "Fee Type", cell: (feeType) => <span className="font-semibold" style={{ color: "var(--foreground)" }}>{feeType.name}</span> },
             { key: "description", header: "Description", cell: (feeType) => <span className="font-medium" style={{ color: "var(--muted-foreground)" }}>{feeType.description || "—"}</span> },

@@ -48,7 +48,7 @@ export default async function StaffAccessPage() {
                 Staff Access
               </h2>
               <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Staff management will be available here.
+                Manage authorized administrator and finance officer user accounts.
               </p>
             </div>
           </div>

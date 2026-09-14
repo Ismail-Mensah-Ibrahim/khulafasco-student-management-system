@@ -66,19 +66,27 @@ export function TopBar({
 
       <div className="flex-1" />
 
-      {/* Search (desktop) */}
-      <div
-        className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
+      {/* Quick Search (desktop) */}
+      <form
+        action="/students"
+        method="get"
+        className="hidden md:flex items-center gap-2 px-3 py-1 rounded-lg text-sm transition-all"
         style={{
           border: "1px solid var(--border)",
           background: "var(--muted)",
-          color: "var(--muted-foreground)",
-          minWidth: 200,
+          minWidth: 240,
         }}
       >
-        <Search className="w-3.5 h-3.5 flex-shrink-0" />
-        <span>Search students…</span>
-      </div>
+        <Search className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "var(--muted-foreground)" }} />
+        <input
+          type="text"
+          name="search"
+          placeholder="Quick student search..."
+          className="bg-transparent text-xs w-full outline-none"
+          style={{ color: "var(--foreground)" }}
+          aria-label="Quick student search"
+        />
+      </form>
 
       {/* Notifications */}
       <button

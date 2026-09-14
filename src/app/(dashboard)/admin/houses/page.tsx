@@ -17,7 +17,7 @@ export default async function HousesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Houses" description="Current house catalog published in Supabase." />
+      <PageHeader title="Houses" description="Student residential and sports house allocations." />
 
       <section className="rounded-xl border p-4 md:p-6" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-sm)" }}>
         <div className="mb-4 flex items-center gap-3">
@@ -37,7 +37,7 @@ export default async function HousesPage() {
         <DataTable
           data={houses}
           keyField="id"
-          emptyMessage="No houses were returned from Supabase."
+          emptyMessage="No houses have been registered yet."
           columns={[
             { key: "name", header: "House", cell: (house) => <span className="font-semibold" style={{ color: "var(--foreground)" }}>{house.name}</span> },
             { key: "created_at", header: "Created", cell: (house) => new Date(house.created_at).toLocaleDateString("en-GH", { dateStyle: "medium" }) },

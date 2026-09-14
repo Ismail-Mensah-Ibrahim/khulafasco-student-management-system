@@ -32,7 +32,7 @@ export default async function AuditLogsPage() {
         <DataTable
           data={auditLogs}
           keyField="id"
-          emptyMessage="No audit records were returned from Supabase."
+          emptyMessage="No audit records found."
           columns={[
             { key: "action", header: "Action", cell: (log) => <span className="font-semibold" style={{ color: "var(--foreground)" }}>{log.action}</span> },
             { key: "entity_type", header: "Entity Type", cell: (log) => log.entity_type ?? "—" },
