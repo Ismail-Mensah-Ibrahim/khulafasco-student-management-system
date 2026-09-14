@@ -28,6 +28,8 @@ export interface DashboardSummary {
   activeStudents: number;
   boardingStudents: number;
   dayStudents: number;
+  maleStudents: number;
+  femaleStudents: number;
   currentAcademicYear: AcademicYear | null;
   programStats: DashboardProgramStat[];
   houseStats: DashboardHouseStat[];
@@ -433,6 +435,7 @@ async function countStudents(filters: {
   houseId?: string | null;
   studentType?: string | null;
   enrollmentStatus?: string | null;
+  gender?: string | null;
 } = {}): Promise<number> {
   const supabase = await createClient();
 
@@ -456,6 +459,10 @@ async function countStudents(filters: {
 
   if (filters.enrollmentStatus) {
     query = query.eq("enrollment_status", filters.enrollmentStatus);
+  }
+
+  if (filters.gender) {
+    query = query.eq("gender", filters.gender);
   }
 
   const { count, error } = await query;
@@ -584,11 +591,13 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   const currentAcademicYear = academicYears.find((year) => year.is_current) ?? academicYears[0] ?? null;
   const academicYearId = currentAcademicYear?.id ?? null;
 
-  const [totalStudents, activeStudents, boardingStudents, dayStudents] = await Promise.all([
+  const [totalStudents, activeStudents, boardingStudents, dayStudents, maleStudents, femaleStudents] = await Promise.all([
     countStudents({ academicYearId }),
     countStudents({ academicYearId, enrollmentStatus: "active" }),
     countStudents({ academicYearId, studentType: "boarding" }),
     countStudents({ academicYearId, studentType: "day" }),
+    countStudents({ academicYearId, gender: "male" }),
+    countStudents({ academicYearId, gender: "female" }),
   ]);
 
   const programStats: DashboardProgramStat[] = await Promise.all(
@@ -620,6 +629,8 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     activeStudents,
     boardingStudents,
     dayStudents,
+    maleStudents,
+    femaleStudents,
     currentAcademicYear,
     programStats: programStats.sort((a, b) => b.count - a.count),
     houseStats: houseStats.sort((a, b) => b.count - a.count),

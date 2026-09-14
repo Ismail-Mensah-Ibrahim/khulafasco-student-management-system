@@ -59,3 +59,7 @@ export const studentEnrollmentSchema = z.object({
 });
 
 export type StudentEnrollmentValues = z.infer<typeof studentEnrollmentSchema>;
+
+export const studentUpdateSchema = studentEnrollmentSchema;
+
+export type StudentUpdateValues = StudentEnrollmentValues;

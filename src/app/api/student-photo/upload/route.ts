@@ -54,12 +54,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "Student record not found." }, { status: 404 });
     }
 
-    if (student.photo_path) {
-      return Response.json({ error: "This student already has a photo." }, { status: 409 });
-    }
+    const oldPhotoPath = student.photo_path;
 
+    // Upload new photo (upserts into storage)
     uploadedPath = await uploadStudentPhoto(supabase, student.id, photo);
 
+    // Save reference in the database
     const { data: updatedStudent, error: updateError } = await supabase
       .from("students")
       .update({ photo_path: uploadedPath })
@@ -68,6 +68,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (updateError || !updatedStudent) {
+      // If DB update failed, remove newly uploaded photo
       try {
         await removeStudentPhoto(supabase, uploadedPath);
       } catch (cleanupError) {
@@ -81,7 +82,20 @@ export async function POST(request: Request) {
       return Response.json({ error: "Unable to save the student photo reference." }, { status: 500 });
     }
 
-    return Response.json({ success: true });
+    // If replacement succeeded and the old path is different, clean up old storage object
+    if (oldPhotoPath && oldPhotoPath !== uploadedPath) {
+      try {
+        await removeStudentPhoto(supabase, oldPhotoPath);
+      } catch (cleanupError) {
+        console.warn("Previous student photo cleanup warning:", {
+          studentId: student.id,
+          oldPath: oldPhotoPath,
+          error: cleanupError instanceof Error ? cleanupError.message : "Unknown",
+        });
+      }
+    }
+
+    return Response.json({ success: true, photoPath: uploadedPath });
   } catch (error) {
     if (uploadedPath) {
       try {
