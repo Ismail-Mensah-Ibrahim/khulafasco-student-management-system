@@ -5,13 +5,14 @@ import { getDashboardSummary, getFinanceDashboardMetrics } from "@/lib/data";
 import { formatCurrency } from "@/lib/utils";
 import {
   Users,
-  GraduationCap,
   Home,
   Bus,
   DollarSign,
   TrendingUp,
   AlertCircle,
   CheckCircle2,
+  User,
+  UserCheck,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -99,9 +100,9 @@ export default async function DashboardPage() {
       <section>
         <h2 className="text-xs font-semibold uppercase tracking-widest mb-3"
           style={{ color: "var(--muted-foreground)" }}>
-          Enrollment
+          Student Statistics
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <StatCard
             label="Total Students"
             value={String(summary.totalStudents)}
@@ -110,14 +111,7 @@ export default async function DashboardPage() {
             bg="var(--brand-accent)"
           />
           <StatCard
-            label="Active"
-            value={String(summary.activeStudents)}
-            icon={GraduationCap}
-            color="var(--success)"
-            bg="var(--success-light)"
-          />
-          <StatCard
-            label="Boarding"
+            label="Boarding Students"
             value={String(summary.boardingStudents)}
             icon={Home}
             color="var(--brand-secondary-foreground)"
@@ -129,6 +123,20 @@ export default async function DashboardPage() {
             icon={Bus}
             color="var(--info)"
             bg="var(--info-light)"
+          />
+          <StatCard
+            label="Male Students"
+            value={String(summary.maleStudents)}
+            icon={User}
+            color="var(--brand-primary)"
+            bg="var(--brand-accent)"
+          />
+          <StatCard
+            label="Female Students"
+            value={String(summary.femaleStudents)}
+            icon={UserCheck}
+            color="var(--brand-secondary)"
+            bg="var(--brand-accent)"
           />
         </div>
       </section>
