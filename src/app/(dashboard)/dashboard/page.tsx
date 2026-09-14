@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SCHOOL } from "@/config/branding";
 import { verifySession } from "@/lib/dal";
 import { getDashboardSummary, getFinanceDashboardMetrics } from "@/lib/data";
@@ -13,6 +14,11 @@ import {
   CheckCircle2,
   User,
   UserCheck,
+  UserPlus,
+  ArrowRight,
+  CreditCard,
+  Receipt,
+  ClipboardList,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -57,18 +63,87 @@ export default async function DashboardPage() {
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
-            <h3 className="font-semibold text-sm mb-4" style={{ color: "var(--foreground)" }}>Finance Attention</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>Finance Priority Items</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "var(--warning-light)", color: "var(--warning)" }}>
+                Attention Needed
+              </span>
+            </div>
             <div className="space-y-3">
-              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Amount Due Not Set: {metrics.notSet}</p>
-              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Outstanding Balance: {formatCurrency(metrics.outstandingBalance)}</p>
-              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Partially Paid: {metrics.partiallyPaid}</p>
+              <div className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Amount Due Not Set</p>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Students requiring fee assignment</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold tabular-nums" style={{ color: "var(--danger)" }}>{metrics.notSet}</span>
+                  <Link
+                    href="/finance"
+                    className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded border transition-colors"
+                    style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--brand-primary)" }}
+                  >
+                    Configure <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Outstanding Balances</p>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Total fees pending collection</p>
+                </div>
+                <span className="text-sm font-bold tabular-nums" style={{ color: "var(--warning)" }}>
+                  {formatCurrency(metrics.outstandingBalance)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Partially Paid Students</p>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Students with partial payments</p>
+                </div>
+                <span className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
+                  {metrics.partiallyPaid}
+                </span>
+              </div>
             </div>
           </div>
+
           <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
-            <h3 className="font-semibold text-sm mb-4" style={{ color: "var(--foreground)" }}>Today’s Activity</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>Today&apos;s Activity &amp; Quick Actions</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "var(--success-light)", color: "var(--success)" }}>
+                Live System
+              </span>
+            </div>
             <div className="space-y-3">
-              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Payments recorded today: {metrics.todayPaymentCount}</p>
-              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Amount collected today: {formatCurrency(metrics.todayCollected)}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg border" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Payments Today</p>
+                  <p className="text-xl font-bold mt-1 tabular-nums" style={{ color: "var(--foreground)" }}>{metrics.todayPaymentCount}</p>
+                </div>
+                <div className="p-3 rounded-lg border" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>Collected Today</p>
+                  <p className="text-xl font-bold mt-1 tabular-nums" style={{ color: "var(--success)" }}>{formatCurrency(metrics.todayCollected)}</p>
+                </div>
+              </div>
+
+              <div className="pt-2 grid grid-cols-2 gap-3">
+                <Link
+                  href="/finance/payments"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg p-3 text-xs font-semibold text-center transition-colors"
+                  style={{ background: "var(--brand-primary)", color: "var(--brand-primary-foreground)" }}
+                >
+                  <CreditCard className="w-4 h-4" /> Record Payment
+                </Link>
+                <Link
+                  href="/finance/receipts"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg p-3 text-xs font-semibold border text-center transition-colors"
+                  style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
+                >
+                  <Receipt className="w-4 h-4" /> View Receipts
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -230,7 +305,7 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Recent activity */}
+        {/* Administrative Quick Actions */}
         <div
           className="rounded-xl p-5"
           style={{
@@ -239,22 +314,114 @@ export default async function DashboardPage() {
             boxShadow: "var(--shadow-sm)",
           }}
         >
-          <h3 className="font-semibold text-sm mb-4" style={{ color: "var(--foreground)" }}>
-            Recent Activity
-          </h3>
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center mb-3"
-              style={{ background: "var(--muted)" }}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>
+              Administrative Quick Actions
+            </h3>
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{ background: "var(--brand-accent)", color: "var(--brand-primary)" }}
             >
-              <Users className="w-5 h-5" style={{ color: "var(--muted-foreground)" }} />
-            </div>
-            <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
-              No activity yet
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>
-              Activity will appear here once the system is connected.
-            </p>
+              Portal Shortcuts
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Link
+              href="/students/enroll"
+              className="flex items-center gap-3 p-3.5 rounded-xl border transition-all hover:shadow-xs group"
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--background)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                style={{ background: "var(--brand-accent)", color: "var(--brand-primary)" }}
+              >
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold leading-tight" style={{ color: "var(--foreground)" }}>
+                  Enroll Student
+                </p>
+                <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--muted-foreground)" }}>
+                  Register admission
+                </p>
+              </div>
+            </Link>
+
+            <Link
+              href="/students"
+              className="flex items-center gap-3 p-3.5 rounded-xl border transition-all hover:shadow-xs group"
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--background)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                style={{ background: "var(--info-light)", color: "var(--info)" }}
+              >
+                <Users className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold leading-tight" style={{ color: "var(--foreground)" }}>
+                  Student Directory
+                </p>
+                <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--muted-foreground)" }}>
+                  Search &amp; edit records
+                </p>
+              </div>
+            </Link>
+
+            <Link
+              href="/finance"
+              className="flex items-center gap-3 p-3.5 rounded-xl border transition-all hover:shadow-xs group"
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--background)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                style={{ background: "var(--success-light)", color: "var(--success)" }}
+              >
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold leading-tight" style={{ color: "var(--foreground)" }}>
+                  Fee Overview
+                </p>
+                <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--muted-foreground)" }}>
+                  Reconciliation &amp; charges
+                </p>
+              </div>
+            </Link>
+
+            <Link
+              href="/admin/audit-logs"
+              className="flex items-center gap-3 p-3.5 rounded-xl border transition-all hover:shadow-xs group"
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--background)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                style={{ background: "var(--brand-accent)", color: "var(--brand-secondary-foreground)" }}
+              >
+                <ClipboardList className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold leading-tight" style={{ color: "var(--foreground)" }}>
+                  Audit History
+                </p>
+                <p className="text-[11px] mt-0.5 truncate" style={{ color: "var(--muted-foreground)" }}>
+                  Security &amp; event logs
+                </p>
+              </div>
+            </Link>
           </div>
         </div>
       </div>

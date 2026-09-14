@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, LayoutDashboard, Users, UserPlus, DollarSign, Receipt, CreditCard, Shield, BookOpen, ClipboardList, Search } from "lucide-react";
+import { Menu, X, LayoutDashboard, Users, UserPlus, DollarSign, Receipt, CreditCard, Shield, BookOpen, ClipboardList, Search, Home } from "lucide-react";
 import { SchoolLogo } from "@/components/branding/SchoolLogo";
 import { SCHOOL } from "@/config/branding";
 import { LogoutButton } from "@/components/auth/LogoutButton";
@@ -21,7 +21,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: "Enroll Student", href: "/students/enroll", icon: UserPlus, roles: ["admin"] },
   { label: "Academic Years", href: "/admin/academic-years", icon: BookOpen, roles: ["admin"] },
   { label: "Programs", href: "/admin/programs", icon: BookOpen, roles: ["admin"] },
-  { label: "Houses", href: "/admin/houses", icon: BookOpen, roles: ["admin"] },
+  { label: "Houses", href: "/admin/houses", icon: Home, roles: ["admin"] },
   { label: "Fee Types", href: "/admin/fee-types", icon: DollarSign, roles: ["admin"] },
   { label: "Financial Overview", href: "/finance", icon: DollarSign, roles: ["admin"] },
   { label: "Payments", href: "/finance/payments", icon: CreditCard, roles: ["admin"] },

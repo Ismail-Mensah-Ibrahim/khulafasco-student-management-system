@@ -87,7 +87,7 @@ export default async function AcademicYearsPage() {
         <DataTable
           data={academicYears}
           keyField="id"
-          emptyMessage="No academic years were returned from Supabase."
+          emptyMessage="No academic years have been configured yet."
           columns={[
             {
               key: "name",

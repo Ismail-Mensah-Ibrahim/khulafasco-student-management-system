@@ -17,7 +17,7 @@ export default async function ProgramsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Programs" description="Current program catalog published in Supabase." />
+      <PageHeader title="Programs" description="Academic curricula and program streams offered by the institution." />
 
       <section className="rounded-xl border p-4 md:p-6" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-sm)" }}>
         <div className="mb-4 flex items-center gap-3">
@@ -37,7 +37,7 @@ export default async function ProgramsPage() {
         <DataTable
           data={programs}
           keyField="id"
-          emptyMessage="No programs were returned from Supabase."
+          emptyMessage="No academic programs found."
           columns={[
             { key: "name", header: "Program", cell: (program) => <span className="font-semibold" style={{ color: "var(--foreground)" }}>{program.name}</span> },
             { key: "code", header: "Code", cell: (program) => <span className="font-medium" style={{ color: "var(--muted-foreground)" }}>{program.code || "—"}</span> },
