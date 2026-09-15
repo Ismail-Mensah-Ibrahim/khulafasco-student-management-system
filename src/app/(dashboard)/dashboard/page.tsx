@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { SCHOOL } from "@/config/branding";
 import { verifySession } from "@/lib/dal";
 import { getDashboardSummary, getFinanceDashboardMetrics } from "@/lib/data";
@@ -149,6 +150,24 @@ export default async function DashboardPage() {
         </section>
       </div>
     );
+  }
+
+  if (session.role !== "admin") {
+    switch (session.role) {
+      case "it_officer":
+        redirect("/it/dashboard");
+      case "headmaster":
+        redirect("/headmaster/dashboard");
+      case "academic_head":
+        redirect("/academic/dashboard");
+      case "teacher":
+        redirect("/teacher/dashboard");
+      case "domestic_officer":
+        redirect("/operations/dashboard");
+      case "general_staff":
+      default:
+        redirect("/staff/dashboard");
+    }
   }
 
   const [summary, metrics] = await Promise.all([

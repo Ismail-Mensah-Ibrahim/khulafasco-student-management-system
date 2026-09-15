@@ -52,7 +52,7 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
     case "it_officer":
       return [
         { label: "IT Dashboard", href: "/it/dashboard", icon: LayoutDashboard, roles: ["it_officer"] },
-        { label: "User Support", href: "/admin/staff", icon: Shield, roles: ["it_officer"], section: "Support" },
+        { label: "User Support", href: "/it/tickets#reset", icon: Shield, roles: ["it_officer"], section: "Support" },
         { label: "IT Tickets", href: "/it/tickets", icon: LifeBuoy, roles: ["it_officer"], section: "Support" },
         { label: "System Health", href: "/it/dashboard#health", icon: Activity, roles: ["it_officer"], section: "Monitoring" },
         { label: "Security Logs", href: "/admin/audit-logs", icon: ClipboardList, roles: ["it_officer"], section: "Monitoring" },

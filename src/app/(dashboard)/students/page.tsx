@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SCHOOL } from "@/config/branding";
 import { GENDER_LABELS } from "@/config/constants";
-import { requireFinanceOrAdmin } from "@/lib/dal";
+import { requireRole } from "@/lib/dal";
 import { getAcademicYears, getStudentsPage, getPrograms, getHouses } from "@/lib/data";
 import { getFullName } from "@/lib/utils";
 
@@ -48,7 +48,7 @@ export default async function StudentsPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireFinanceOrAdmin();
+  await requireRole(["admin", "finance_officer", "headmaster", "academic_head"]);
 
   const params = (await searchParams) ?? {};
   const search = typeof params.search === "string" ? params.search : "";

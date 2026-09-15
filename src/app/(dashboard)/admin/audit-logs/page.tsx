@@ -3,7 +3,7 @@ import { ClipboardList } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DataTable } from "@/components/shared/DataTable";
 import { SCHOOL } from "@/config/branding";
-import { requireAdmin } from "@/lib/dal";
+import { requireRole } from "@/lib/dal";
 import { getAuditLogs } from "@/lib/data";
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AuditLogsPage() {
-  await requireAdmin();
+  await requireRole(["admin", "it_officer", "headmaster"]);
   const auditLogs = await getAuditLogs({ throwOnError: false });
 
   return (

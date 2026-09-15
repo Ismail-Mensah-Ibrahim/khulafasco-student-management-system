@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ITTicket } from "@/types";
-import { updateTicketStatusAction, initiatePasswordResetAction } from "@/lib/actions/it-tickets";
+import { updateTicketStatusAction, initiatePasswordResetAction, createTicketAction } from "@/lib/actions/it-tickets";
 import { IT_TICKET_STATUSES, type ITTicketStatus } from "@/config/constants";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,14 +15,16 @@ import {
   KeyRound,
   Search,
   Filter,
+  PlusCircle,
 } from "lucide-react";
 
 interface ITTicketsClientProps {
   initialTickets: ITTicket[];
   sessionUserId: string;
+  isIT?: boolean;
 }
 
-export function ITTicketsClient({ initialTickets, sessionUserId }: ITTicketsClientProps) {
+export function ITTicketsClient({ initialTickets, sessionUserId, isIT = true }: ITTicketsClientProps) {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTicket, setActiveTicket] = useState<ITTicket | null>(null);
@@ -33,8 +35,12 @@ export function ITTicketsClient({ initialTickets, sessionUserId }: ITTicketsClie
   const [statusMessage, setStatusMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [resetMessage, setResetMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createMessage, setCreateMessage] = useState<{ text: string; isError: boolean } | null>(null);
+
   const [isPendingStatus, startTransitionStatus] = useTransition();
   const [isPendingReset, startTransitionReset] = useTransition();
+  const [isPendingCreate, startTransitionCreate] = useTransition();
 
   const filteredTickets = initialTickets.filter((ticket) => {
     if (filterStatus !== "all" && ticket.status !== filterStatus) return false;
@@ -90,40 +96,123 @@ export function ITTicketsClient({ initialTickets, sessionUserId }: ITTicketsClie
     });
   };
 
+  const submitCreateTicket = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    startTransitionCreate(async () => {
+      const res = await createTicketAction(undefined, formData);
+      setCreateMessage({ text: res.message, isError: !res.success });
+      if (res.success) {
+        form.reset();
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
-      {/* Password Reset Utility Card */}
-      <Card id="reset" className="border-border bg-card shadow-xs">
-        <CardHeader className="pb-3 border-b border-border/50">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <KeyRound className="size-4 text-primary" />
-            Quick Dispatch: Staff Password Reset Email
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <form onSubmit={submitPasswordReset} className="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
-            <div className="flex-1 w-full space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold">Staff Member Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="teacher@khulafasco.edu.gh"
-                required
-                className="text-sm h-9"
-              />
-            </div>
-            <Button type="submit" disabled={isPendingReset} size="default" className="shrink-0 h-9">
-              {isPendingReset ? "Sending..." : "Send Reset Link"}
+      {/* Password Reset Utility Card (IT Staff only) OR Report Issue Card (General Staff) */}
+      {isIT ? (
+        <Card id="reset" className="border-border bg-card shadow-xs">
+          <CardHeader className="pb-3 border-b border-border/50">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <KeyRound className="size-4 text-primary" />
+              Quick Dispatch: Staff Password Reset Email
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <form onSubmit={submitPasswordReset} className="flex flex-col sm:flex-row items-end gap-3 max-w-xl">
+              <div className="flex-1 w-full space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold">Staff Member Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="teacher@khulafasco.edu.gh"
+                  required
+                  className="text-sm h-9"
+                />
+              </div>
+              <Button type="submit" disabled={isPendingReset} size="default" className="shrink-0 h-9">
+                {isPendingReset ? "Sending..." : "Send Reset Link"}
+              </Button>
+            </form>
+            {resetMessage && (
+              <p className={`text-xs mt-2 font-medium ${resetMessage.isError ? "text-destructive" : "text-emerald-600"}`}>
+                {resetMessage.text}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-border bg-card shadow-xs">
+          <CardHeader className="pb-3 border-b border-border/50 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <LifeBuoy className="size-4 text-primary" />
+              Report a Technical or IT Issue
+            </CardTitle>
+            <Button
+              onClick={() => { setShowCreateForm(!showCreateForm); setCreateMessage(null); }}
+              variant={showCreateForm ? "outline" : "default"}
+              size="sm"
+            >
+              {showCreateForm ? "Hide Form" : <><PlusCircle className="size-4 mr-1" /> New Support Ticket</>}
             </Button>
-          </form>
-          {resetMessage && (
-            <p className={`text-xs mt-2 font-medium ${resetMessage.isError ? "text-destructive" : "text-emerald-600"}`}>
-              {resetMessage.text}
-            </p>
+          </CardHeader>
+          {showCreateForm && (
+            <CardContent className="pt-4">
+              <form onSubmit={submitCreateTicket} className="space-y-4 max-w-xl">
+                <div className="space-y-1.5">
+                  <Label htmlFor="ticketTitle" className="text-xs font-semibold">Issue Title</Label>
+                  <Input id="ticketTitle" name="title" placeholder="e.g. Computer not booting in Room 3" required className="text-sm h-9" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="category" className="text-xs font-semibold">Category</Label>
+                    <select id="category" name="category" required className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm font-medium text-foreground">
+                      <option value="Hardware">Hardware / PC</option>
+                      <option value="Network">Internet / Wi-Fi</option>
+                      <option value="Software">Portal / Software</option>
+                      <option value="AudioVisual">Printer / Projector</option>
+                      <option value="Other">Other Technical</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="priority" className="text-xs font-semibold">Priority</Label>
+                    <select id="priority" name="priority" defaultValue="medium" className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm font-medium text-foreground">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="location" className="text-xs font-semibold">Location / Room</Label>
+                    <Input id="location" name="location" placeholder="e.g. Lab 1, Staff Room" className="text-sm h-9" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="description" className="text-xs font-semibold">Problem Description</Label>
+                  <Textarea id="description" name="description" rows={3} placeholder="Please provide specific details about the issue..." required className="text-sm" />
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  {createMessage && (
+                    <p className={`text-xs font-medium ${createMessage.isError ? "text-destructive" : "text-emerald-600"}`}>
+                      {createMessage.text}
+                    </p>
+                  )}
+                  <div className="ml-auto flex items-center gap-2">
+                    <Button type="button" onClick={() => setShowCreateForm(false)} variant="ghost" size="sm">Cancel</Button>
+                    <Button type="submit" disabled={isPendingCreate} size="sm">
+                      {isPendingCreate ? "Submitting..." : "Submit Ticket"}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </CardContent>
           )}
-        </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -218,16 +307,18 @@ export function ITTicketsClient({ initialTickets, sessionUserId }: ITTicketsClie
                     )}
                   </div>
 
-                  <div className="shrink-0 flex items-center gap-2">
-                    <Button
-                      onClick={() => handleUpdateStatus(ticket)}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      Update / Resolve
-                    </Button>
-                  </div>
+                  {isIT ? (
+                    <div className="shrink-0 flex items-center gap-2">
+                      <Button
+                        onClick={() => handleUpdateStatus(ticket)}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                      >
+                        Update / Resolve
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

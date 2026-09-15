@@ -8,7 +8,7 @@ import { PaymentForm } from "./_components/PaymentForm";
 import { StudentChargeForm } from "./_components/StudentChargeForm";
 import { AmountDueForm } from "./_components/AmountDueForm";
 import { ReconciliationPanel } from "./_components/ReconciliationPanel";
-import { requireFinanceOrAdmin } from "@/lib/dal";
+import { requireRole } from "@/lib/dal";
 import { getAcademicYears, getFeeTypes, getHouses, getPrograms, getStudentFinanceByIndex, getStudentFinancialReconciliation } from "@/lib/data";
 import { formatCurrency, getFullName } from "@/lib/utils";
 import { SCHOOL } from "@/config/branding";
@@ -63,7 +63,8 @@ export default async function FinancePage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireFinanceOrAdmin();
+  const session = await requireRole(["admin", "finance_officer", "headmaster"]);
+  const canManageFinance = session.role === "admin" || session.role === "finance_officer";
   const params = (await searchParams) ?? {};
   const indexNumber = typeof params.index === "string" ? params.index.trim() : "";
   const invalidIndex = indexNumber.length > 0 && !/^\d{10}$/.test(indexNumber);
@@ -197,16 +198,20 @@ export default async function FinancePage({
 
           {reconciliation ? <ReconciliationPanel result={reconciliation} /> : null}
 
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <StudentChargeForm student={lookup.data.student} feeTypes={feeTypes} />
-            <AmountDueForm student={lookup.data.student} currentAmount={lookup.data.financial.total_amount_due} />
-          </div>
+          {canManageFinance ? (
+            <>
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <StudentChargeForm student={lookup.data.student} feeTypes={feeTypes} />
+                <AmountDueForm student={lookup.data.student} currentAmount={lookup.data.financial.total_amount_due} />
+              </div>
 
-          <PaymentForm
-            student={lookup.data.student}
-            financial={lookup.data.financial}
-            fee_allocations={lookup.data.fee_allocations}
-          />
+              <PaymentForm
+                student={lookup.data.student}
+                financial={lookup.data.financial}
+                fee_allocations={lookup.data.fee_allocations}
+              />
+            </>
+          ) : null}
 
           <div className="rounded-xl border p-4 md:p-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             <h2 className="mb-4 text-lg font-semibold">Charges</h2>

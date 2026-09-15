@@ -133,7 +133,7 @@ export async function requireHeadmaster(): Promise<SessionUser> {
  * Verify session AND require Academic Head role.
  */
 export async function requireAcademicHead(): Promise<SessionUser> {
-  return requireRole(["academic_head", "admin"]);
+  return requireRole(["academic_head", "headmaster", "admin"]);
 }
 
 /**
