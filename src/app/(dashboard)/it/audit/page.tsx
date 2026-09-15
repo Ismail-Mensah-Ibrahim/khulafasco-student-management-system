@@ -3,15 +3,15 @@ import { SCHOOL } from "@/config/branding";
 import { requireRole } from "@/lib/dal";
 import { getAuditLogs, getStaffProfiles } from "@/lib/data";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { SecurityAuditCenterClient } from "@/app/(dashboard)/it/audit/_components/SecurityAuditCenterClient";
+import { SecurityAuditCenterClient } from "./_components/SecurityAuditCenterClient";
 
 export const metadata: Metadata = {
-  title: `Audit Logs | ${SCHOOL.shortName}`,
+  title: `Security & Audit Center | ${SCHOOL.shortName}`,
 };
 
-export default async function AuditLogsPage() {
+export default async function SecurityAuditCenterPage() {
   await requireRole(["admin", "it_officer", "headmaster"]);
-  const [auditLogs, staffList] = await Promise.all([
+  const [logs, staffList] = await Promise.all([
     getAuditLogs({ limit: 500 }),
     getStaffProfiles(),
   ]);
@@ -19,11 +19,11 @@ export default async function AuditLogsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Security & Audit Logs"
-        description="Authorized activity, authentication, and governance audit history."
+        title="Security & Audit Center"
+        description={`Institutional activity, authentication, and governance audit trail for ${SCHOOL.shortName}.`}
       />
 
-      <SecurityAuditCenterClient initialLogs={auditLogs} staffList={staffList} />
+      <SecurityAuditCenterClient initialLogs={logs} staffList={staffList} />
     </div>
   );
 }

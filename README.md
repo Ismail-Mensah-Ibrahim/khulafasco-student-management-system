@@ -125,16 +125,49 @@ The system implements a comprehensive 8-role Role-Based Access Control (RBAC) ar
 
 | Role | Responsibilities & Access Scope | Dedicated Landing Route |
 |---|---|---|
-| `admin` | Full administrative access: student admission, academic years, houses, programs, fee configuration, staff accounts, system-wide audit logs. | `/dashboard` |
-| `it_officer` | Technical operations, system uptime monitoring, ticket triage, and secure dispatch of user password resets. | `/it/dashboard` |
+| `admin` | Full administrative access: student admission, academic years, semesters, classes, houses, programs, fee configuration, staff lifecycle & RBAC, system-wide audit logs. | `/dashboard` |
+| `it_officer` | Technical operations, system uptime monitoring, ticket triage, security & audit center, and secure dispatch of user password resets. | `/it/dashboard` |
 | `headmaster` | Executive governance: institutional analytics, student directory inspection, financial audit overview, requisition review/approvals, audit history. | `/headmaster/dashboard` |
-| `academic_head` | Curriculum coordination: class stream allocations, subject offerings, assessment & terminal results moderation, student directory access. | `/academic/dashboard` |
+| `academic_head` | Curriculum coordination: class stream allocations, semester scheduling, subject offerings, assessment & terminal results moderation, student directory access. | `/academic/dashboard` |
 | `teacher` | Classroom operations: daily attendance marking, subject test (30%) & exam (70%) grade submissions, requisition requests, IT helpdesk. | `/teacher/dashboard` |
 | `finance_officer` | Financial administration: student fee assignment, payment intake, manual fee allocation, receipt generation, reconciliation, requisition disbursements. | `/finance` |
 | `domestic_officer` | School operations & logistics: boarding facilities, supply requisitions, logistics tracking, IT helpdesk. | `/operations/dashboard` |
 | `general_staff` | Workplace requests: material and expenditure requisitions, IT helpdesk support. | `/staff/dashboard` |
 
 Roles are enforced at every application layer: database RLS, server actions, and Server Component DAL guards.
+
+---
+
+## Core Lifecycle & Operational Features
+
+### 1. Staff Lifecycle Management (`/admin/staff`)
+- **8-Role RBAC Administration**: Authoritative role assignment and live profile editing.
+- **Account Activation / Deactivation**: Non-destructive toggle to disable staff access immediately.
+- **Pre-Deletion Reference Safety Audit**: Automated RPC check verifying 8 reference tables (`audit_logs`, `payments`, `requests`, `attendance_records`, `student_results`, `it_tickets`, `classes`, `teacher_assignments`) before allowing permanent deletion.
+- **Secure Password Reset Dispatch**: Authorized dispatch of Supabase Auth password recovery emails.
+
+### 2. Academic Lifecycle: Semesters & Classes (`/admin/semesters`, `/admin/classes`)
+- **Configurable Semesters**: Manage Semester 1 & Semester 2 per academic year with unique active semester enforcement.
+- **Classes & Streams**: Stream creation (e.g., 1A, 1B, 2 Science, etc.) tied to academic years and programs with capacity limits.
+- **Class Teacher Assignments**: Assignment of teaching staff to manage specific classes.
+- **Student Academic Enrollments**: Comprehensive historical tracking (`student_academic_enrollments`) recording student progression across years and semesters without overwriting past enrollment records.
+
+### 3. Bulk Student Import Wizard (`/students/import`)
+- **7-Step Import Wizard**: Download Template $\rightarrow$ Upload CSV $\rightarrow$ Validation & Duplicate Detection $\rightarrow$ Record Preview $\rightarrow$ Mode Selection (`new_only` / `update_existing`) $\rightarrow$ Transactional Execution $\rightarrow$ Summary Report.
+- **Duplicate Prevention**: In-file duplicate index checking and database index conflict resolution.
+- **Data Integrity**: Automatically attaches students to the active academic year, semester, program, and house.
+
+### 4. Student Promotion & Academic Progression (`/students/promotion`)
+- **Cohort Promotion**: Promote students across academic years (Form 1 $\rightarrow$ Form 2 $\rightarrow$ Form 3 $\rightarrow$ Graduated).
+- **Flexible Outcomes**: Support for `PROMOTED`, `REPEATED`, `GRADUATED`, `TRANSFERRED`, `WITHDRAWN`, and `DEFERRED`.
+- **Destination Stream Assignment**: Target class assignment with capacity awareness.
+- **Batch Progression Audit**: Audit trail records generated for each cohort transition.
+
+### 5. Security & Audit Center (`/it/audit`, `/admin/audit-logs`)
+- **Chronological Audit Trail**: Searchable event logs with date range, user, actor role, module, action, target, and status filters.
+- **Severity Classification**: `INFO`, `WARNING`, `SECURITY`, and `CRITICAL` severity flags.
+- **Event Detail & Payloads**: Full modal inspection displaying actor details, target identifiers, and before/after state snapshots.
+- **Operational Metrics**: IT dashboard stream tracking active/disabled staff, open tickets, and security events.
 
 ---
 
