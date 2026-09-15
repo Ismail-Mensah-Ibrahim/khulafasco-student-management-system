@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Pencil, User } from 'lucide-react';
-import { requireFinanceOrAdmin } from '@/lib/dal';
+import { requireRole } from '@/lib/dal';
 import { getStudentByJhsIndexNumber } from '@/lib/data';
 import { formatDate, getFullName } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ jhs_index
 }
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ jhs_index_number: string }> }) {
-  const session = await requireFinanceOrAdmin();
+  const session = await requireRole(["admin", "finance_officer", "headmaster", "academic_head"]);
 
   const { jhs_index_number } = await params;
   const student = await getStudentByJhsIndexNumber(jhs_index_number);

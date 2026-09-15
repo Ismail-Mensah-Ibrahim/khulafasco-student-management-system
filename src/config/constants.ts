@@ -58,9 +58,110 @@ export const PAYMENT_TRANSACTION_STATUSES = ["completed", "cancelled", "reversed
 
 export type PaymentTransactionStatus = (typeof PAYMENT_TRANSACTION_STATUSES)[number];
 
-export const ROLES = ["admin", "finance_officer"] as const;
+export const ROLES = [
+  "admin",
+  "it_officer",
+  "headmaster",
+  "academic_head",
+  "teacher",
+  "finance_officer",
+  "domestic_officer",
+  "general_staff",
+] as const;
 
 export type UserRole = (typeof ROLES)[number];
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  admin: "System Administrator",
+  it_officer: "IT Officer / Facilitator",
+  headmaster: "Headmaster",
+  academic_head: "Academic Head",
+  teacher: "Teacher",
+  finance_officer: "Finance Officer",
+  domestic_officer: "Domestic & Logistics Officer",
+  general_staff: "General Staff",
+};
+
+export const REQUEST_CATEGORIES = [
+  "Academic",
+  "Teaching Materials",
+  "Office Supplies",
+  "ICT/Technology",
+  "Maintenance",
+  "Kitchen",
+  "Hostel",
+  "Cleaning",
+  "Logistics",
+  "SickBay Supplies",
+  "Transportation",
+  "Events",
+  "Money Request",
+  "Other",
+] as const;
+
+export type RequestCategory = (typeof REQUEST_CATEGORIES)[number];
+
+export const REQUEST_TYPES = ["item", "money"] as const;
+export type RequestType = (typeof REQUEST_TYPES)[number];
+
+export const REQUEST_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
+export type RequestPriority = (typeof REQUEST_PRIORITIES)[number];
+
+export const REQUEST_STATUSES = [
+  "draft",
+  "submitted",
+  "under_review",
+  "approved",
+  "rejected",
+  "returned",
+  "waiting_release",
+  "released",
+  "completed",
+] as const;
+
+export type RequestStatus = (typeof REQUEST_STATUSES)[number];
+
+export const IT_TICKET_CATEGORIES = [
+  "Computer / Hardware",
+  "Printer / Scanner",
+  "Internet / Network",
+  "Projector / AV",
+  "Software Issue",
+  "Login / Account Access",
+  "System Bug / Problem",
+  "Other Technical Issue",
+] as const;
+
+export type ITTicketCategory = (typeof IT_TICKET_CATEGORIES)[number];
+
+export const IT_TICKET_STATUSES = [
+  "open",
+  "acknowledged",
+  "in_progress",
+  "resolved",
+  "closed",
+] as const;
+
+export type ITTicketStatus = (typeof IT_TICKET_STATUSES)[number];
+
+export const ATTENDANCE_STATUSES = ["present", "absent", "late", "excused"] as const;
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
+
+export const RESULT_STATUSES = [
+  "draft",
+  "submitted",
+  "under_review",
+  "approved",
+  "published",
+] as const;
+
+export type ResultStatus = (typeof RESULT_STATUSES)[number];
+
+export const TERMS = ["Term 1", "Term 2", "Term 3"] as const;
+export type AcademicTerm = (typeof TERMS)[number];
+
+export const FORM_LEVELS = ["Form 1", "Form 2", "Form 3"] as const;
+export type FormLevel = (typeof FORM_LEVELS)[number];
 
 export const ENROLLMENT_STATUSES = ["active", "inactive", "transferred", "graduated"] as const;
 

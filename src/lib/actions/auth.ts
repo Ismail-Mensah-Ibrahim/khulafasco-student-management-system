@@ -98,11 +98,25 @@ export async function loginAction(
   }
 
   // 4. Success — redirect by role to the correct operational dashboard
-  if (profile.role === "finance_officer") {
-    redirect("/finance");
+  switch (profile.role) {
+    case "it_officer":
+      redirect("/it/dashboard");
+    case "headmaster":
+      redirect("/headmaster/dashboard");
+    case "academic_head":
+      redirect("/academic/dashboard");
+    case "teacher":
+      redirect("/teacher/dashboard");
+    case "finance_officer":
+      redirect("/finance");
+    case "domestic_officer":
+      redirect("/operations/dashboard");
+    case "general_staff":
+      redirect("/staff/dashboard");
+    case "admin":
+    default:
+      redirect("/dashboard");
   }
-
-  redirect("/dashboard");
 }
 
 // ---------------------------------------------------------------------------

@@ -119,25 +119,42 @@ Row Level Security (RLS) is enabled on all tables.
 
 ---
 
-## User Roles
+## User Roles & Responsibilities
 
-| Role | Permissions |
-|---|---|
-| `admin` | Full access: enrollment, records, financial setup, staff management, audit logs |
-| `finance_officer` | Finance operations: view students, set amounts, record payments, generate receipts |
+The system implements a comprehensive 8-role Role-Based Access Control (RBAC) architecture:
 
-Roles are enforced at the database level via RLS and RPC functions.
+| Role | Responsibilities & Access Scope | Dedicated Landing Route |
+|---|---|---|
+| `admin` | Full administrative access: student admission, academic years, houses, programs, fee configuration, staff accounts, system-wide audit logs. | `/dashboard` |
+| `it_officer` | Technical operations, system uptime monitoring, ticket triage, and secure dispatch of user password resets. | `/it/dashboard` |
+| `headmaster` | Executive governance: institutional analytics, student directory inspection, financial audit overview, requisition review/approvals, audit history. | `/headmaster/dashboard` |
+| `academic_head` | Curriculum coordination: class stream allocations, subject offerings, assessment & terminal results moderation, student directory access. | `/academic/dashboard` |
+| `teacher` | Classroom operations: daily attendance marking, subject test (30%) & exam (70%) grade submissions, requisition requests, IT helpdesk. | `/teacher/dashboard` |
+| `finance_officer` | Financial administration: student fee assignment, payment intake, manual fee allocation, receipt generation, reconciliation, requisition disbursements. | `/finance` |
+| `domestic_officer` | School operations & logistics: boarding facilities, supply requisitions, logistics tracking, IT helpdesk. | `/operations/dashboard` |
+| `general_staff` | Workplace requests: material and expenditure requisitions, IT helpdesk support. | `/staff/dashboard` |
+
+Roles are enforced at every application layer: database RLS, server actions, and Server Component DAL guards.
+
+---
+
+## Out-of-Scope Modules & Boundaries
+
+To preserve strict compliance with school requirements and avoid bloat, the following modules are explicitly designated as out-of-scope:
+
+- **Library Management**: Book cataloging, borrowing/lending cards, and barcode scanning are NOT implemented.
+- **Clinical SickBay Records**: Full electronic health records (EHR), prescription management, and detailed medical history are NOT implemented (basic boarding health notes are maintained within student profile records).
 
 ---
 
 ## Student Identification
 
-The official student identifier is the **JHS/BECE Index Number**.
+The official canonical student identifier is the **JHS/BECE Index Number**.
 
 - Required, unique, searchable
-- Always normalized: uppercase, trimmed
-- Finance searches by this number
-- Do NOT use any other generated ID
+- Always normalized: 10 digits, trimmed
+- Finance and enrollment search and reconcile strictly by this number
+- Enforced by unique database constraints and application validation
 
 ---
 
@@ -146,23 +163,35 @@ The official student identifier is the **JHS/BECE Index Number**.
 ```
 src/
 ├── app/
-│   ├── (auth)/          # Login, unauthenticated pages
-│   └── (dashboard)/     # Protected application routes
+│   ├── (auth)/          # Staff authentication & login
+│   ├── (dashboard)/     # Role-guarded operational routes
+│   │   ├── academic/    # Academic Head & Teacher workflows
+│   │   ├── admin/       # Administrator configuration & staff access
+│   │   ├── dashboard/   # Smart root dashboard router
+│   │   ├── finance/     # Fee configuration, payments & receipts
+│   │   ├── headmaster/  # Executive oversight dashboard
+│   │   ├── it/          # IT Support, health checks & ticketing
+│   │   ├── operations/  # Domestic & logistics workspace
+│   │   ├── requests/    # Multi-tier requisition workflows
+│   │   ├── staff/       # General staff portal
+│   │   └── students/    # Student enrollment, directory & details
+│   └── unauthorized/    # Access denied fallback
 ├── components/
-│   ├── branding/        # SchoolLogo, SchoolHeader
-│   ├── layout/          # Sidebar, TopBar, MobileSidebar, AppShell
-│   ├── shared/          # StatCard, PageHeader, DataTable, EmptyState, etc.
-│   └── ui/              # shadcn primitives
+│   ├── branding/        # Official Khulafasco crest and headers
+│   ├── layout/          # TopBar, role-aware Sidebar, MobileSidebar
+│   ├── shared/          # DataTable, PageHeader, EmptyState, StatCard
+│   └── ui/              # Accessible UI components (Tailwind v4 / Radix)
 ├── config/
-│   ├── branding.ts      # School name, logo, colors
-│   └── constants.ts     # Programs, houses, roles, payment methods
-├── features/            # Feature modules (Milestones 3–8)
+│   ├── branding.ts      # School identity, colors, mottos
+│   └── constants.ts     # Roles, statuses, payment methods, classes
 ├── lib/
-│   ├── supabase/        # Browser and server clients
-│   └── utils.ts         # cn(), formatCurrency(), getFullName(), etc.
-├── hooks/               # React hooks (Milestone 2+)
+│   ├── actions/         # Authoritative Server Actions (auth, admin, finance, academics, IT, requests)
+│   ├── dal.ts           # Data Access Layer & session/role guards
+│   ├── data.ts          # Server-side data retrieval functions
+│   ├── supabase/        # Browser and Server clients
+│   └── validation/      # Zod validation schemas
 └── types/
-    └── index.ts         # TypeScript types mirroring the DB schema
+    └── index.ts         # TypeScript models mirroring schema
 ```
 
 ---
@@ -173,24 +202,4 @@ src/
 2. Set environment variables in Vercel project settings:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-3. Deploy from the `main` branch.
-
-Do not deploy to production automatically — obtain approval first.
-
----
-
-## Development Milestones
-
-| Milestone | Status | Description |
-|---|---|---|
-| 1 | ✅ Complete | Project foundation, design system, school branding |
-| 2 | ⏳ Pending approval | Supabase auth, session management, protected routes |
-| 3 | ⏳ Pending | Admin dashboard, student enrollment |
-| 4 | ⏳ Pending | Student records, search, profile |
-| 5 | ⏳ Pending | Finance dashboard, financial setup |
-| 6 | ⏳ Pending | Fee charges, reconciliation |
-| 7 | ⏳ Pending | Payment recording, manual allocation |
-| 8 | ⏳ Pending | Receipts, payment history |
-| 9 | ⏳ Pending | Audit/activity, security hardening |
-| 10 | ⏳ Pending | Responsive QA, accessibility, polish |
-| 11 | ⏳ Pending | Production build, Vercel readiness |
+3. Deploy from the verified release branch.

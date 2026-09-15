@@ -7,8 +7,10 @@ import { LogoutButton } from "@/components/auth/LogoutButton";
 import { getInitials } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 
+import { UserRole, ROLE_LABELS } from "@/config/constants";
+
 interface TopBarProps {
-  userRole?: "admin" | "finance_officer";
+  userRole?: UserRole;
   userName?: string;
   userEmail?: string;
   pageTitle?: string;
@@ -124,7 +126,7 @@ export function TopBar({
               {userName}
             </p>
             <p className="text-xs leading-tight" style={{ color: "var(--muted-foreground)" }}>
-              {userRole === "admin" ? "Administrator" : "Finance Officer"}
+              {ROLE_LABELS[userRole] ?? "Staff Member"}
             </p>
           </div>
 
@@ -168,7 +170,7 @@ export function TopBar({
                   color: "var(--brand-primary)",
                 }}
               >
-                {userRole === "admin" ? "Administrator" : "Finance Officer"}
+                {ROLE_LABELS[userRole] ?? "Staff Member"}
               </span>
             </div>
 
