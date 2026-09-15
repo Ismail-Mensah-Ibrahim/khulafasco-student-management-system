@@ -64,19 +64,22 @@ function getRawValues(formData: FormData): Record<keyof StudentEnrollmentValues,
   };
 }
 
-function getDatabaseErrorMessage(code: string | undefined): string {
-  switch (code) {
-    case "23505":
-      return "A student with this JHS index number already exists.";
-    case "23503":
-      return "One of the selected academic year, program, or house records is invalid. Refresh the page and try again.";
-    case "42501":
-      return "You are not authorized to perform this operation.";
-    case "22P02":
-      return "One of the submitted values is invalid. Review the form and try again.";
-    default:
-      return "Unable to save student details right now. Please try again.";
+function getDatabaseErrorMessage(code: string | undefined, message?: string): string {
+  const lowerMessage = message?.toLowerCase() ?? "";
+
+  if (code === "23505" || lowerMessage.includes("already exists")) {
+    return "A student with this JHS/BECE Index Number already exists.";
   }
+  if (code === "42501" || lowerMessage.includes("not authorized") || lowerMessage.includes("unauthorized") || lowerMessage.includes("only administrators")) {
+    return "You are not authorized to perform this operation.";
+  }
+  if (code === "23503") {
+    return "One of the selected academic year, program, or house records is invalid. Refresh the page and try again.";
+  }
+  if (code === "22P02") {
+    return "One of the submitted values is invalid. Review the form and try again.";
+  }
+  return "Unable to save student details right now. Please try again.";
 }
 
 export async function createStudentAction(
@@ -123,7 +126,7 @@ export async function createStudentAction(
   if (error) {
     return {
       success: false,
-      message: getDatabaseErrorMessage(error.code),
+      message: getDatabaseErrorMessage(error.code, error.message),
     };
   }
 
@@ -186,7 +189,7 @@ export async function updateStudentAction(
     }
     return {
       success: false,
-      message: rpcError.message || getDatabaseErrorMessage(rpcError.code),
+      message: getDatabaseErrorMessage(rpcError.code, rpcError.message),
     };
   }
 
