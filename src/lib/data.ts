@@ -9,7 +9,7 @@ import {
   type StudentFinanceResult,
   type StudentFinancialReconciliation,
 } from "@/lib/validation/finance";
-import type { AcademicYear, AuditLog, FeeType, House, Program, Student, SchoolClass, Subject, RequestRecord, ITTicket, AttendanceRecord, StudentResult } from "@/types";
+import type { AcademicYear, AuditLog, FeeType, House, Program, Student, SchoolClass, Subject, RequestRecord, ITTicket, AttendanceRecord, StudentResult, Profile } from "@/types";
 
 export interface DashboardProgramStat {
   name: string;
@@ -804,4 +804,18 @@ export async function getStudentResults(filters?: {
     return [];
   }
   return (data ?? []) as StudentResult[];
+}
+
+export async function getStaffProfiles(): Promise<Profile[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("getStaffProfiles error:", error);
+    return [];
+  }
+  return (data ?? []) as Profile[];
 }

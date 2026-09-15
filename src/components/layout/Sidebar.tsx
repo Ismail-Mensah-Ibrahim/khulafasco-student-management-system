@@ -110,7 +110,11 @@ export function Sidebar({
           <NavLink
             key={`${item.href}-${item.label}`}
             item={item}
-            active={pathname === item.href || pathname.startsWith(item.href + "/")}
+            active={
+              pathname === item.href ||
+              (item.href !== "/dashboard" &&
+                pathname.startsWith(item.href + "/"))
+            }
             collapsed={collapsed}
           />
         ))}

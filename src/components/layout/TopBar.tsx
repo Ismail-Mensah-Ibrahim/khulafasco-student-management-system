@@ -126,7 +126,7 @@ export function TopBar({
               {userName}
             </p>
             <p className="text-xs leading-tight" style={{ color: "var(--muted-foreground)" }}>
-              {userRole === "admin" ? "Administrator" : "Finance Officer"}
+              {ROLE_LABELS[userRole] ?? "Staff Member"}
             </p>
           </div>
 

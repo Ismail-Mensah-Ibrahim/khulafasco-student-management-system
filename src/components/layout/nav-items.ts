@@ -19,6 +19,7 @@ import {
   GraduationCap,
   Layers,
   FileSpreadsheet,
+  Settings,
 } from "lucide-react";
 import type { UserRole } from "@/config/constants";
 
@@ -47,6 +48,7 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
         { label: "All Requests", href: "/requests", icon: FileText, roles: ["admin"], section: "Operations" },
         { label: "Staff Access", href: "/admin/staff", icon: Shield, roles: ["admin"], section: "Administration" },
         { label: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], section: "Administration" },
+        { label: "Settings", href: "/admin/settings", icon: Settings, roles: ["admin"], section: "Administration" },
       ];
 
     case "it_officer":

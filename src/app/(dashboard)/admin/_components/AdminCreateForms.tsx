@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createAcademicYearAction, createHouseAction, createProgramAction, createFeeTypeAction, createStaffAction } from "@/lib/actions/admin";
+import { ROLES, ROLE_LABELS } from "@/config/constants";
 
 export function AcademicYearCreateForm() {
   return (
@@ -78,8 +79,11 @@ export function StaffCreateForm() {
         <div className="space-y-2"><Label htmlFor="staff-phone">Phone</Label><Input id="staff-phone" name="phone" /></div>
         <div className="space-y-2"><Label htmlFor="staff-role">Role</Label><select id="staff-role" name="role" required className="flex h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm">
           <option value="">Select role</option>
-          <option value="admin">System Administrator</option>
-          <option value="finance_officer">Finance Officer</option>
+          {ROLES.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_LABELS[r] ?? r}
+            </option>
+          ))}
         </select></div>
         <div className="space-y-2"><Label htmlFor="staff-password">Password</Label><Input id="staff-password" name="password" type="password" required /></div>
         <div className="flex items-end col-span-full"><Button type="submit" className="w-full"><Users className="mr-2 h-4 w-4" />Create Staff</Button></div>
