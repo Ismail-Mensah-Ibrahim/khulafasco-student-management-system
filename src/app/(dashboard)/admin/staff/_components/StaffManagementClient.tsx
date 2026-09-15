@@ -54,7 +54,7 @@ export function StaffManagementClient({
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   const [isPending, startTransition] = useTransition();
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
 
   // Dialog states
   const [roleModalStaff, setRoleModalStaff] = useState<Profile | null>(null);
@@ -199,7 +199,12 @@ export function StaffManagementClient({
 
       const result = await safeDeleteStaffAction(formData);
       if (result.success) {
-        setFeedback({ type: "success", message: result.message });
+        // Partial success: profile removed but auth account may be orphaned
+        if ("warning" in result && result.warning) {
+          setFeedback({ type: "warning", message: result.warning });
+        } else {
+          setFeedback({ type: "success", message: result.message });
+        }
         const idx = initialStaffList.findIndex((s) => s.id === deleteModalStaff.id);
         if (idx > -1) initialStaffList.splice(idx, 1);
         setDeleteModalStaff(null);
@@ -235,14 +240,18 @@ export function StaffManagementClient({
           className={`flex items-center justify-between p-4 rounded-lg border text-sm ${
             feedback.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-red-50 border-red-200 text-red-800"
+              : feedback.type === "warning"
+                ? "bg-amber-50 border-amber-200 text-amber-800"
+                : "bg-red-50 border-red-200 text-red-800"
           }`}
         >
           <div className="flex items-center gap-2">
             {feedback.type === "success" ? (
-              <CheckCircle2 className="size-5 text-emerald-600" />
+              <CheckCircle2 className="size-5 text-emerald-600 shrink-0" />
+            ) : feedback.type === "warning" ? (
+              <AlertTriangle className="size-5 text-amber-600 shrink-0" />
             ) : (
-              <XCircle className="size-5 text-red-600" />
+              <XCircle className="size-5 text-red-600 shrink-0" />
             )}
             <span>{feedback.message}</span>
           </div>
@@ -256,6 +265,7 @@ export function StaffManagementClient({
           </Button>
         </div>
       )}
+
 
       {/* Filter and Search Bar */}
       <Card className="shadow-xs border-border">

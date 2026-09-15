@@ -256,7 +256,7 @@ export async function createStaffAction(formData: FormData): Promise<void> {
 }
 
 export type StaffActionResult =
-  | { success: true; message: string }
+  | { success: true; message: string; warning?: string }
   | { success: false; message: string };
 
 export async function updateStaffRoleAction(formData: FormData): Promise<StaffActionResult> {
@@ -438,6 +438,22 @@ export async function safeDeleteStaffAction(formData: FormData): Promise<StaffAc
   revalidatePath("/admin/staff");
   revalidatePath("/it/dashboard");
   revalidatePath("/it/audit");
+
+  // The RPC returns auth_deleted: false when the profile was removed but the
+  // underlying auth.users row could not be deleted (requires service role access).
+  // This is a partial-success state — the staff member can no longer log in via
+  // the application (profile gone) but their auth credential may still exist.
+  // Surface this distinction so the admin can take manual action if needed.
+  if (delResult && delResult.auth_deleted === false) {
+    return {
+      success: true,
+      message: delResult.message,
+      warning:
+        "The staff profile has been removed from the system, but the authentication account " +
+        "could not be deleted automatically. Please remove it manually via the " +
+        "Supabase Authentication dashboard to prevent an orphaned credential.",
+    };
+  }
 
   return {
     success: true,
