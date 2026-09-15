@@ -3,19 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Users,
-  UserPlus,
-  DollarSign,
-  Receipt,
-  CreditCard,
-  Shield,
-  BookOpen,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
-  Home,
-  Search,
 } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { SchoolLogo } from "@/components/branding/SchoolLogo";
@@ -23,41 +12,11 @@ import { SCHOOL } from "@/config/branding";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  roles: ("admin" | "finance_officer" | "all")[];
-  section?: string;
-}
-
-const ADMIN_NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin"] },
-  { label: "Students", href: "/students", icon: Users, roles: ["admin"], section: "Students" },
-  { label: "Enroll Student", href: "/students/enroll", icon: UserPlus, roles: ["admin"], section: "Students" },
-  { label: "Academic Years", href: "/admin/academic-years", icon: BookOpen, roles: ["admin"], section: "Academics" },
-  { label: "Programs", href: "/admin/programs", icon: BookOpen, roles: ["admin"], section: "Academics" },
-  { label: "Houses", href: "/admin/houses", icon: Home, roles: ["admin"], section: "Academics" },
-  { label: "Fee Types", href: "/admin/fee-types", icon: DollarSign, roles: ["admin"], section: "Finance" },
-  { label: "Financial Overview", href: "/finance", icon: DollarSign, roles: ["admin"], section: "Finance" },
-  { label: "Payments", href: "/finance/payments", icon: CreditCard, roles: ["admin"], section: "Finance" },
-  { label: "Reconciliation", href: "/finance/receipts", icon: ClipboardList, roles: ["admin"], section: "Finance" },
-  { label: "Staff Access", href: "/admin/staff", icon: Shield, roles: ["admin"], section: "Administration" },
-  { label: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], section: "Administration" },
-];
-
-const FINANCE_NAV_ITEMS: NavItem[] = [
-  { label: "Finance Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["finance_officer"] },
-  { label: "Find Student", href: "/finance?index=", icon: Search, roles: ["finance_officer"], section: "Finance" },
-  { label: "Payments", href: "/finance/payments", icon: CreditCard, roles: ["finance_officer"], section: "Finance" },
-  { label: "Receipts", href: "/finance/receipts", icon: Receipt, roles: ["finance_officer"], section: "Finance" },
-  { label: "Reconciliation", href: "/finance", icon: ClipboardList, roles: ["finance_officer"], section: "Finance" },
-  { label: "Students", href: "/students", icon: Users, roles: ["finance_officer"], section: "Students" },
-  { label: "Student Financial Records", href: "/finance", icon: DollarSign, roles: ["finance_officer"], section: "Students" },
-];
+import { UserRole, ROLE_LABELS } from "@/config/constants";
+import { getNavItemsForRole, type NavItem } from "@/components/layout/nav-items";
 
 interface SidebarProps {
-  userRole?: "admin" | "finance_officer";
+  userRole?: UserRole;
   userName?: string;
   userEmail?: string;
 }
@@ -74,9 +33,7 @@ export function Sidebar({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
-  const visibleItems = (userRole === "finance_officer" ? FINANCE_NAV_ITEMS : ADMIN_NAV_ITEMS).filter(
-    (item) => item.roles.includes("all") || item.roles.includes(userRole)
-  );
+  const visibleItems = getNavItemsForRole(userRole);
 
   // Group by section
   const sections: string[] = [];
@@ -205,7 +162,7 @@ export function Sidebar({
               {userName}
             </p>
             <p className="text-xs truncate" style={{ color: "var(--sidebar-muted)" }}>
-              {userRole === "admin" ? "Administrator" : "Finance Officer"}
+              {ROLE_LABELS[userRole] ?? "Staff Member"}
             </p>
             {userEmail && (
               <p className="text-xs truncate" style={{ color: "var(--sidebar-muted)" }}>

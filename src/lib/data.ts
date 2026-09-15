@@ -9,7 +9,7 @@ import {
   type StudentFinanceResult,
   type StudentFinancialReconciliation,
 } from "@/lib/validation/finance";
-import type { AcademicYear, AuditLog, FeeType, House, Program, Student } from "@/types";
+import type { AcademicYear, AuditLog, FeeType, House, Program, Student, SchoolClass, Subject, RequestRecord, ITTicket, AttendanceRecord, StudentResult } from "@/types";
 
 export interface DashboardProgramStat {
   name: string;
@@ -635,4 +635,173 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     programStats: programStats.sort((a, b) => b.count - a.count),
     houseStats: houseStats.sort((a, b) => b.count - a.count),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Multi-Role Data Fetching Helpers
+// ---------------------------------------------------------------------------
+
+export async function getRequests(filters?: {
+  status?: string;
+  requesterId?: string;
+  category?: string;
+}): Promise<RequestRecord[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("requests")
+    .select(`
+      *,
+      requester:profiles!requests_requester_id_fkey(id, full_name, email, role),
+      reviewer:profiles!requests_reviewed_by_fkey(id, full_name, email, role),
+      releaser:profiles!requests_released_by_fkey(id, full_name, email, role)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (filters?.status && filters.status !== "all") {
+    query = query.eq("status", filters.status);
+  }
+  if (filters?.requesterId) {
+    query = query.eq("requester_id", filters.requesterId);
+  }
+  if (filters?.category) {
+    query = query.eq("category", filters.category);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("getRequests error:", error);
+    return [];
+  }
+  return (data ?? []) as RequestRecord[];
+}
+
+export async function getRequestById(id: string): Promise<RequestRecord | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("requests")
+    .select(`
+      *,
+      requester:profiles!requests_requester_id_fkey(id, full_name, email, role),
+      reviewer:profiles!requests_reviewed_by_fkey(id, full_name, email, role),
+      releaser:profiles!requests_released_by_fkey(id, full_name, email, role),
+      items:request_items(*)
+    `)
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("getRequestById error:", error);
+    return null;
+  }
+  return data as RequestRecord;
+}
+
+export async function getITTickets(filters?: {
+  status?: string;
+  requesterId?: string;
+}): Promise<ITTicket[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("it_tickets")
+    .select(`
+      *,
+      requester:profiles!it_tickets_requester_id_fkey(id, full_name, email, role),
+      assignee:profiles!it_tickets_assigned_to_fkey(id, full_name, email, role)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (filters?.status && filters.status !== "all") {
+    query = query.eq("status", filters.status);
+  }
+  if (filters?.requesterId) {
+    query = query.eq("requester_id", filters.requesterId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("getITTickets error:", error);
+    return [];
+  }
+  return (data ?? []) as ITTicket[];
+}
+
+export async function getClasses(): Promise<SchoolClass[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("classes")
+    .select(`
+      *,
+      program:programs(id, name, code),
+      class_teacher:profiles!classes_class_teacher_id_fkey(id, full_name, email)
+    `)
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("getClasses error:", error);
+    return [];
+  }
+  return (data ?? []) as SchoolClass[];
+}
+
+export async function getSubjects(): Promise<Subject[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subjects")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("getSubjects error:", error);
+    return [];
+  }
+  return (data ?? []) as Subject[];
+}
+
+export async function getAttendanceRecords(classId?: string, date?: string): Promise<AttendanceRecord[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("attendance_records")
+    .select(`
+      *,
+      student:students(id, jhs_index_number, full_name, photo_path)
+    `)
+    .order("date", { ascending: false });
+
+  if (classId) query = query.eq("class_id", classId);
+  if (date) query = query.eq("date", date);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("getAttendanceRecords error:", error);
+    return [];
+  }
+  return (data ?? []) as AttendanceRecord[];
+}
+
+export async function getStudentResults(filters?: {
+  classId?: string;
+  subjectId?: string;
+  status?: string;
+}): Promise<StudentResult[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("student_results")
+    .select(`
+      *,
+      student:students(id, jhs_index_number, full_name),
+      subject:subjects(id, name, code),
+      class:classes(id, name)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (filters?.classId) query = query.eq("class_id", filters.classId);
+  if (filters?.subjectId) query = query.eq("subject_id", filters.subjectId);
+  if (filters?.status) query = query.eq("status", filters.status);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("getStudentResults error:", error);
+    return [];
+  }
+  return (data ?? []) as StudentResult[];
 }

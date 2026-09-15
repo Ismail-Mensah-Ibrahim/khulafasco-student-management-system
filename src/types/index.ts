@@ -4,14 +4,24 @@
  */
 
 import type {
+  AcademicTerm,
+  AttendanceStatus,
   BoardingType,
   EnrollmentStatus,
+  FormLevel,
   Gender,
   GuardianRelationship,
+  ITTicketCategory,
+  ITTicketStatus,
   PaymentMethod,
   PaymentMethodValue,
   PaymentStatus,
   PaymentTransactionStatus,
+  RequestCategory,
+  RequestPriority,
+  RequestStatus,
+  RequestType,
+  ResultStatus,
   UserRole,
 } from "@/config/constants";
 
@@ -219,3 +229,148 @@ export interface PageMeta {
 export type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+// ---------------------------------------------------------------------------
+// Academic Management Types
+// ---------------------------------------------------------------------------
+
+export interface SchoolClass {
+  id: string;
+  name: string;
+  form_level: FormLevel | string;
+  program_id: string | null;
+  academic_year_id: string;
+  class_teacher_id: string | null;
+  created_at: string;
+  program?: Program;
+  class_teacher?: Profile;
+}
+
+export interface Subject {
+  id: string;
+  name: string;
+  code: string;
+  department: string | null;
+  is_elective: boolean;
+  created_at: string;
+}
+
+export interface TeacherAssignment {
+  id: string;
+  teacher_id: string;
+  class_id: string;
+  subject_id: string;
+  academic_year_id: string;
+  created_at: string;
+  class?: SchoolClass;
+  subject?: Subject;
+  teacher?: Profile;
+}
+
+export interface StudentClassAssignment {
+  id: string;
+  student_id: string;
+  class_id: string;
+  academic_year_id: string;
+  created_at: string;
+  student?: Student;
+  class?: SchoolClass;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  class_id: string;
+  student_id: string;
+  date: string;
+  status: AttendanceStatus;
+  recorded_by: string;
+  notes: string | null;
+  created_at: string;
+  student?: Student;
+}
+
+export interface StudentResult {
+  id: string;
+  student_id: string;
+  class_id: string;
+  subject_id: string;
+  academic_year_id: string;
+  term: AcademicTerm | string;
+  assessment_score: number | null;
+  exam_score: number | null;
+  total_score: number | null;
+  grade: string | null;
+  remarks: string | null;
+  status: ResultStatus;
+  submitted_by: string | null;
+  approved_by: string | null;
+  created_at: string;
+  updated_at: string;
+  student?: Student;
+  subject?: Subject;
+  class?: SchoolClass;
+}
+
+// ---------------------------------------------------------------------------
+// Request Management Types
+// ---------------------------------------------------------------------------
+
+export interface RequestRecord {
+  id: string;
+  requester_id: string;
+  request_type: RequestType;
+  category: RequestCategory | string;
+  title: string;
+  description: string;
+  amount_requested: number;
+  amount_approved: number | null;
+  amount_released: number | null;
+  priority: RequestPriority;
+  status: RequestStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_comments: string | null;
+  released_by: string | null;
+  released_at: string | null;
+  release_method: string | null;
+  release_reference: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  requester?: Profile;
+  reviewer?: Profile;
+  releaser?: Profile;
+  items?: RequestItem[];
+}
+
+export interface RequestItem {
+  id: string;
+  request_id: string;
+  item_name: string;
+  quantity: number;
+  estimated_unit_cost: number;
+  estimated_total_cost: number;
+}
+
+// ---------------------------------------------------------------------------
+// IT Ticketing Types
+// ---------------------------------------------------------------------------
+
+export interface ITTicket {
+  id: string;
+  requester_id: string;
+  title: string;
+  category: ITTicketCategory | string;
+  description: string;
+  priority: RequestPriority;
+  location: string | null;
+  status: ITTicketStatus;
+  assigned_to: string | null;
+  resolution_notes: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  requester?: Profile;
+  assignee?: Profile;
+}

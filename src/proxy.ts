@@ -23,6 +23,13 @@ const PROTECTED_PREFIXES = [
   "/students",
   "/finance",
   "/admin",
+  "/it",
+  "/headmaster",
+  "/academic",
+  "/teacher",
+  "/operations",
+  "/staff",
+  "/requests",
   "/unauthorized",
 ];
 

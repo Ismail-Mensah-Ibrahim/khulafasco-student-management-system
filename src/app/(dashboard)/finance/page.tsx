@@ -97,6 +97,16 @@ export default async function FinancePage({
       <PageHeader
         title="Finance"
         description="Student Financial Overview"
+        action={
+          <div className="flex items-center gap-2">
+            <Link
+              href="/requests?status=waiting_release"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-foreground hover:bg-muted shadow-xs transition-all"
+            >
+              Operational Releases
+            </Link>
+          </div>
+        }
       />
 
       <section className="rounded-xl border p-4 md:p-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>

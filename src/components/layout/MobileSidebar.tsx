@@ -3,45 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, LayoutDashboard, Users, UserPlus, DollarSign, Receipt, CreditCard, Shield, BookOpen, ClipboardList, Search, Home } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { SchoolLogo } from "@/components/branding/SchoolLogo";
 import { SCHOOL } from "@/config/branding";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  roles: ("admin" | "finance_officer" | "all")[];
-}
-
-const ADMIN_NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin"] },
-  { label: "Students", href: "/students", icon: Users, roles: ["admin"] },
-  { label: "Enroll Student", href: "/students/enroll", icon: UserPlus, roles: ["admin"] },
-  { label: "Academic Years", href: "/admin/academic-years", icon: BookOpen, roles: ["admin"] },
-  { label: "Programs", href: "/admin/programs", icon: BookOpen, roles: ["admin"] },
-  { label: "Houses", href: "/admin/houses", icon: Home, roles: ["admin"] },
-  { label: "Fee Types", href: "/admin/fee-types", icon: DollarSign, roles: ["admin"] },
-  { label: "Financial Overview", href: "/finance", icon: DollarSign, roles: ["admin"] },
-  { label: "Payments", href: "/finance/payments", icon: CreditCard, roles: ["admin"] },
-  { label: "Reconciliation", href: "/finance/receipts", icon: ClipboardList, roles: ["admin"] },
-  { label: "Staff Access", href: "/admin/staff", icon: Shield, roles: ["admin"] },
-  { label: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"] },
-];
-
-const FINANCE_NAV_ITEMS: NavItem[] = [
-  { label: "Finance Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["finance_officer"] },
-  { label: "Find Student", href: "/finance?index=", icon: Search, roles: ["finance_officer"] },
-  { label: "Payments", href: "/finance/payments", icon: CreditCard, roles: ["finance_officer"] },
-  { label: "Receipts", href: "/finance/receipts", icon: Receipt, roles: ["finance_officer"] },
-  { label: "Reconciliation", href: "/finance", icon: ClipboardList, roles: ["finance_officer"] },
-  { label: "Students", href: "/students", icon: Users, roles: ["finance_officer"] },
-  { label: "Student Financial Records", href: "/finance", icon: DollarSign, roles: ["finance_officer"] },
-];
+import { UserRole, ROLE_LABELS } from "@/config/constants";
+import { getNavItemsForRole } from "@/components/layout/nav-items";
 
 interface MobileSidebarProps {
-  userRole?: "admin" | "finance_officer";
+  userRole?: UserRole;
   userName?: string;
 }
 
@@ -53,9 +24,7 @@ export function MobileSidebar({ userRole = "admin", userName = "Staff User" }: M
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  const visibleItems = (userRole === "finance_officer" ? FINANCE_NAV_ITEMS : ADMIN_NAV_ITEMS).filter(
-    (item) => item.roles.includes("all") || item.roles.includes(userRole)
-  );
+  const visibleItems = getNavItemsForRole(userRole);
 
   return (
     <>
@@ -103,7 +72,7 @@ export function MobileSidebar({ userRole = "admin", userName = "Staff User" }: M
                 {SCHOOL.shortName}
               </p>
               <p className="text-xs" style={{ color: "var(--sidebar-muted)" }}>
-                {userRole === "admin" ? "Administrator" : "Finance Officer"}
+                {ROLE_LABELS[userRole] ?? "Staff Member"}
               </p>
             </div>
           </div>

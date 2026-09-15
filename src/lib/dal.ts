@@ -97,27 +97,92 @@ export const getOptionalSession = cache(async (): Promise<SessionUser | null> =>
 });
 
 /**
- * Verify session AND require admin role.
- * Redirects to /unauthorized if authenticated but not admin.
+ * Verify session AND require one of the specified roles.
+ * Redirects to /unauthorized if role not in allowed list.
  */
-export async function requireAdmin(): Promise<SessionUser> {
+export async function requireRole(allowedRoles: readonly UserRole[]): Promise<SessionUser> {
   const session = await verifySession();
-  if (session.role !== "admin") {
+  if (!allowedRoles.includes(session.role)) {
     redirect("/unauthorized");
   }
   return session;
 }
 
 /**
+ * Verify session AND require admin role.
+ */
+export async function requireAdmin(): Promise<SessionUser> {
+  return requireRole(["admin"]);
+}
+
+/**
+ * Verify session AND require IT officer role.
+ */
+export async function requireITOfficer(): Promise<SessionUser> {
+  return requireRole(["it_officer", "admin"]);
+}
+
+/**
+ * Verify session AND require Headmaster role.
+ */
+export async function requireHeadmaster(): Promise<SessionUser> {
+  return requireRole(["headmaster", "admin"]);
+}
+
+/**
+ * Verify session AND require Academic Head role.
+ */
+export async function requireAcademicHead(): Promise<SessionUser> {
+  return requireRole(["academic_head", "admin"]);
+}
+
+/**
+ * Verify session AND require Teacher role.
+ */
+export async function requireTeacher(): Promise<SessionUser> {
+  return requireRole(["teacher", "academic_head", "admin"]);
+}
+
+/**
+ * Verify session AND require Finance Officer role.
+ */
+export async function requireFinanceOfficer(): Promise<SessionUser> {
+  return requireRole(["finance_officer", "admin"]);
+}
+
+/**
+ * Verify session AND require Domestic/Logistics Officer role.
+ */
+export async function requireDomesticOfficer(): Promise<SessionUser> {
+  return requireRole(["domestic_officer", "admin"]);
+}
+
+/**
+ * Verify session for any authenticated staff member.
+ */
+export async function requireStaff(): Promise<SessionUser> {
+  return verifySession();
+}
+
+/**
  * Verify session AND require finance_officer or admin role.
- * Redirects to /unauthorized if neither.
  */
 export async function requireFinanceOrAdmin(): Promise<SessionUser> {
-  const session = await verifySession();
-  if (session.role !== "finance_officer" && session.role !== "admin") {
-    redirect("/unauthorized");
-  }
-  return session;
+  return requireRole(["finance_officer", "admin"]);
+}
+
+/**
+ * Verify session AND require academic_head or admin role.
+ */
+export async function requireAcademicOrAdmin(): Promise<SessionUser> {
+  return requireRole(["academic_head", "admin"]);
+}
+
+/**
+ * Verify session AND require Headmaster or Admin (request reviewers).
+ */
+export async function requireReviewer(): Promise<SessionUser> {
+  return requireRole(["headmaster", "admin"]);
 }
 
 /**
