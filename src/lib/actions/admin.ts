@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/dal";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getStaffSafetyCheck } from "@/lib/data";
 import { ROLES } from "@/config/constants";
 import type { StaffDeletionSafety } from "@/types";
@@ -401,10 +401,37 @@ export async function safeDeleteStaffAction(formData: FormData): Promise<StaffAc
     return { success: false, message: "You cannot delete your own active administrator account." };
   }
 
-  // Run safety check first
-  const { data: safetyResult, error: checkError } = await supabase.rpc("check_staff_deletion_safety", {
-    p_staff_id: staffId,
-  });
+  // Fetch staff details for audit trail (before any mutation)
+  const { data: staffProfile, error: fetchError } = await supabase
+    .from("profiles")
+    .select("full_name, role")
+    .eq("id", staffId)
+    .single();
+
+  if (fetchError || !staffProfile) {
+    return { success: false, message: "Staff account not found." };
+  }
+
+  const staffName = staffProfile.full_name ?? "Unknown";
+  const staffRole = String(staffProfile.role ?? "unknown");
+
+  // Helper: write a blocked/failed deletion audit event without touching data
+  async function auditBlockedAttempt(reason: string): Promise<void> {
+    await supabase.rpc("audit_failed_deletion_attempt", {
+      p_staff_id:   staffId,
+      p_actor_id:   session.id,
+      p_actor_role: session.role,
+      p_staff_name: staffName,
+      p_staff_role: staffRole,
+      p_reason:     reason,
+    });
+  }
+
+  // A. Business safety check — block if historical records reference this account
+  const { data: safetyResult, error: checkError } = await supabase.rpc(
+    "check_staff_deletion_safety",
+    { p_staff_id: staffId }
+  );
 
   if (checkError) {
     console.error("check_staff_deletion_safety error:", checkError);
@@ -415,49 +442,91 @@ export async function safeDeleteStaffAction(formData: FormData): Promise<StaffAc
   }
 
   if (safetyResult && !safetyResult.safe) {
-    const reasons = Array.isArray(safetyResult.reasons) ? safetyResult.reasons.join(", ") : "Historical records exist";
+    const reasons = Array.isArray(safetyResult.reasons)
+      ? safetyResult.reasons.join(", ")
+      : "Historical records exist";
     return {
       success: false,
       message: `Permanent deletion blocked: Account is referenced by ${safetyResult.total_references} historical record(s) (${reasons}). Please deactivate the account instead.`,
     };
   }
 
-  // Safe to delete - invoke delete_staff_account RPC
-  const { data: delResult, error: delError } = await supabase.rpc("delete_staff_account", {
-    p_staff_id: staffId,
-  });
+  // B. Verify a trusted server-side mechanism (Admin API) is available.
+  //    createAdminClient() returns null when SUPABASE_SERVICE_ROLE_KEY is not configured.
+  //    Without it we cannot guarantee auth.users deletion — block and surface the requirement.
+  const adminClient = createAdminClient();
+  if (!adminClient) {
+    const reason =
+      "SUPABASE_SERVICE_ROLE_KEY is not configured on this server. " +
+      "Permanent deletion requires the Admin API to remove the authentication account. " +
+      "Add SUPABASE_SERVICE_ROLE_KEY to the server environment variables (never NEXT_PUBLIC_) " +
+      "and redeploy, or remove the user manually via the Supabase Authentication dashboard.";
+    await auditBlockedAttempt("SERVICE_ROLE_KEY_NOT_CONFIGURED");
+    return { success: false, message: reason };
+  }
 
-  if (delError) {
-    console.error("delete_staff_account error:", delError);
+  // C. Delete the authentication account FIRST via the Admin API.
+  //    If this fails, the profile is left untouched — no orphan possible.
+  const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(staffId);
+
+  if (authDeleteError) {
+    console.error("auth.admin.deleteUser error:", authDeleteError);
+    const reason = `Admin API auth deletion failed: ${authDeleteError.message}`;
+    await auditBlockedAttempt(reason);
     return {
       success: false,
-      message: delError.message || "Failed to permanently delete staff account.",
+      message:
+        "Failed to delete the authentication account. The staff profile has NOT been removed. " +
+        `Reason: ${authDeleteError.message}`,
     };
   }
 
+  // D. Auth account confirmed deleted. Now delete public.profiles and write the audit log.
+  //    This call is inside a Postgres transaction so profile deletion + audit are atomic.
+  const { data: finalizeResult, error: finalizeError } = await supabase.rpc(
+    "finalize_staff_deletion",
+    {
+      p_staff_id:   staffId,
+      p_actor_id:   session.id,
+      p_actor_role: session.role,
+      p_staff_name: staffName,
+      p_staff_role: staffRole,
+      p_status:     "SUCCESS",
+    }
+  );
+
+  if (finalizeError) {
+    // Auth account is already deleted at this point. Profile deletion failed.
+    // This is a critical-partial state — the auth is gone but the profile row remains.
+    // Log this at CRITICAL level with a distinct status.
+    console.error("finalize_staff_deletion error (auth already deleted):", finalizeError);
+    await supabase.rpc("finalize_staff_deletion", {
+      p_staff_id:   staffId,
+      p_actor_id:   session.id,
+      p_actor_role: session.role,
+      p_staff_name: staffName,
+      p_staff_role: staffRole,
+      p_status:     "CRITICAL_PARTIAL",
+    });
+    return {
+      success: false,
+      message:
+        "The authentication account was deleted but the application profile could not be removed. " +
+        "The staff member cannot log in. Please delete the orphaned profile row manually " +
+        "from the profiles table in the Supabase database dashboard.",
+    };
+  }
+
+  // E. Full success — both auth.users and public.profiles deleted.
   revalidatePath("/admin/staff");
   revalidatePath("/it/dashboard");
   revalidatePath("/it/audit");
 
-  // The RPC returns auth_deleted: false when the profile was removed but the
-  // underlying auth.users row could not be deleted (requires service role access).
-  // This is a partial-success state — the staff member can no longer log in via
-  // the application (profile gone) but their auth credential may still exist.
-  // Surface this distinction so the admin can take manual action if needed.
-  if (delResult && delResult.auth_deleted === false) {
-    return {
-      success: true,
-      message: delResult.message,
-      warning:
-        "The staff profile has been removed from the system, but the authentication account " +
-        "could not be deleted automatically. Please remove it manually via the " +
-        "Supabase Authentication dashboard to prevent an orphaned credential.",
-    };
-  }
-
   return {
     success: true,
-    message: delResult?.message || "Staff account has been permanently removed.",
+    message:
+      finalizeResult?.message ??
+      `Staff account for ${staffName} has been permanently and fully deleted.`,
   };
 }
 
