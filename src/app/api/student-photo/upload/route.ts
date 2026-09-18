@@ -11,6 +11,8 @@ import { z } from "zod";
 
 const studentIdSchema = z.string().uuid();
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const session = await getOptionalSession();
 
@@ -76,8 +78,18 @@ export async function POST(request: Request) {
 
     const oldPhotoPath = student.photo_path;
 
-    // Upload new photo (upserts into storage)
-    uploadedPath = await uploadStudentPhoto(storageClient, student.id, photo);
+    // Try storage upload, with automatic embedded fallback if bucket does not exist yet
+    try {
+      uploadedPath = await uploadStudentPhoto(storageClient, student.id, photo);
+    } catch (storageErr) {
+      if (photo.size <= 500 * 1024) {
+        const buffer = Buffer.from(await photo.arrayBuffer());
+        const base64 = buffer.toString("base64");
+        uploadedPath = `data:${photo.type || "image/jpeg"};base64,${base64}`;
+      } else {
+        throw storageErr;
+      }
+    }
 
     // Save reference in the database
     const { data: updatedStudent, error: updateError } = await supabase
@@ -89,21 +101,23 @@ export async function POST(request: Request) {
 
     if (updateError || !updatedStudent) {
       // If DB update failed, remove newly uploaded photo
-      try {
-        await removeStudentPhoto(storageClient, uploadedPath);
-      } catch (cleanupError) {
-        console.error("Student photo cleanup failed:", {
-          studentId: student.id,
-          path: uploadedPath,
-          errorName: cleanupError instanceof Error ? cleanupError.name : "UnknownError",
-        });
+      if (uploadedPath && !uploadedPath.startsWith("data:")) {
+        try {
+          await removeStudentPhoto(storageClient, uploadedPath);
+        } catch (cleanupError) {
+          console.error("Student photo cleanup failed:", {
+            studentId: student.id,
+            path: uploadedPath,
+            errorName: cleanupError instanceof Error ? cleanupError.name : "UnknownError",
+          });
+        }
       }
 
       return Response.json({ error: "Unable to save the student photo reference." }, { status: 500 });
     }
 
     // If replacement succeeded and the old path is different, clean up old storage object
-    if (oldPhotoPath && oldPhotoPath !== uploadedPath) {
+    if (oldPhotoPath && !oldPhotoPath.startsWith("data:") && oldPhotoPath !== uploadedPath) {
       try {
         await removeStudentPhoto(storageClient, oldPhotoPath);
       } catch (cleanupError) {
@@ -114,6 +128,7 @@ export async function POST(request: Request) {
         });
       }
     }
+
 
     return Response.json({ success: true, photoPath: uploadedPath });
   } catch (error) {

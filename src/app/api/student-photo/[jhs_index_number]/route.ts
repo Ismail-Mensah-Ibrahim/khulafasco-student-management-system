@@ -39,9 +39,28 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ jhs_in
     const photoPath = student.photo_path;
     if (!photoPath) return new Response('Photo not found', { status: 404 });
 
+    // If photo is stored as a direct base64 data URI, serve it directly
+    if (photoPath.startsWith('data:')) {
+      const commaIdx = photoPath.indexOf(',');
+      if (commaIdx !== -1) {
+        const meta = photoPath.substring(0, commaIdx);
+        const base64Data = photoPath.substring(commaIdx + 1);
+        const mime = meta.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+        const buffer = Buffer.from(base64Data, 'base64');
+        return new Response(buffer, {
+          status: 200,
+          headers: {
+            'Content-Type': mime,
+            'Cache-Control': 'private, max-age=60',
+          },
+        });
+      }
+    }
+
     const adminClient = createAdminClient();
     const storageClient = adminClient ?? (await createClient());
     const { data, error } = await storageClient.storage.from('student-photos').download(photoPath);
+
 
     if (error || !data) {
       return new Response('Unable to fetch photo', { status: 500 });

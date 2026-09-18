@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { BOARDING_TYPES, ENROLLMENT_STATUSES, GENDERS, GENDER_LABELS, GUARDIAN_RELATIONSHIPS } from "@/config/constants";
-import { createStudentAction, type EnrollmentState } from "@/lib/actions/students";
+import { createStudentAction, uploadStudentPhotoAction, type EnrollmentState } from "@/lib/actions/students";
 import { StudentPhotoCapture } from "@/components/shared/StudentPhotoCapture";
 import type { AcademicYear, House, Program } from "@/types";
 
@@ -113,21 +113,19 @@ export function EnrollmentForm({ academicYears, programs, houses }: EnrollmentFo
       formData.append("photo", selectedPhoto);
 
       try {
-        const response = await fetch("/api/student-photo/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const result = await response.json() as { error?: string; success?: boolean };
-        if (!response.ok || !result.success) {
-          throw new Error(result.error ?? "Unable to upload the student photo.");
+        const result = await uploadStudentPhotoAction(formData);
+        if (!result.success) {
+          throw new Error(result.error);
         }
         if (!cancelled) setUploadStatus("success");
       } catch (error) {
         if (!cancelled) {
-          setPhotoError(error instanceof Error ? error.message : "Unable to upload the student photo.");
+          const msg = error instanceof Error ? error.message : "Unable to upload the student photo.";
+          setPhotoError(msg === "Failed to fetch" ? "Network connection interrupted. Please try again." : msg);
           setUploadStatus("error");
         }
       }
+
     };
 
     void uploadPhoto();
