@@ -387,6 +387,18 @@ export async function toggleStaffActiveAction(formData: FormData): Promise<Staff
   };
 }
 
+interface ServiceRoleStaffClient {
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  from: (table: string) => {
+    delete: () => {
+      eq: (col: string, val: string) => Promise<{ error: { message: string } | null }>;
+    };
+  };
+}
+
 export async function safeDeleteStaffAction(formData: FormData): Promise<StaffActionResult> {
   const session = await requireAdmin();
   const supabase = await createClient();
@@ -417,14 +429,38 @@ export async function safeDeleteStaffAction(formData: FormData): Promise<StaffAc
 
   // Helper: write a blocked/failed deletion audit event without touching data
   async function auditBlockedAttempt(reason: string): Promise<void> {
-    await supabase.rpc("audit_failed_deletion_attempt", {
-      p_staff_id:   staffId,
-      p_actor_id:   session.id,
-      p_actor_role: session.role,
-      p_staff_name: staffName,
-      p_staff_role: staffRole,
-      p_reason:     reason,
-    });
+    try {
+      const { error: rpcErr } = await supabase.rpc("audit_failed_deletion_attempt", {
+        p_staff_id:   staffId,
+        p_actor_id:   session.id,
+        p_actor_role: session.role,
+        p_staff_name: staffName,
+        p_staff_role: staffRole,
+        p_reason:     reason,
+      });
+
+      if (rpcErr) {
+        await supabase.from("audit_logs").insert({
+          user_id: session.id,
+          actor_role: session.role,
+          action: "STAFF_DELETION_BLOCKED",
+          module: "STAFF",
+          target_identifier: staffId,
+          description: `Permanent deletion blocked for: ${staffName} (${staffRole}). Reason: ${reason}`,
+          severity: "CRITICAL",
+          status: "FAILED",
+          metadata: {
+            reason,
+            staff_id: staffId,
+            staff_name: staffName,
+            auth_deleted: false,
+            profile_deleted: false,
+          },
+        });
+      }
+    } catch (e) {
+      console.error("auditBlockedAttempt error:", e);
+    }
   }
 
   // A. Business safety check — block if historical records reference this account
@@ -465,25 +501,40 @@ export async function safeDeleteStaffAction(formData: FormData): Promise<StaffAc
     return { success: false, message: reason };
   }
 
-  // C. Delete the authentication account FIRST via the Admin API.
-  //    If this fails, the profile is left untouched — no orphan possible.
+  const serviceClient = adminClient as unknown as ServiceRoleStaffClient;
+
+  // C. Delete the authentication account via the Admin API.
+  //    If this fails because the user is already deleted/not found, proceed to clean up profile.
   const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(staffId);
 
+  let authAlreadyDeleted = false;
   if (authDeleteError) {
-    console.error("auth.admin.deleteUser error:", authDeleteError);
-    const reason = `Admin API auth deletion failed: ${authDeleteError.message}`;
-    await auditBlockedAttempt(reason);
-    return {
-      success: false,
-      message:
-        "Failed to delete the authentication account. The staff profile has NOT been removed. " +
-        `Reason: ${authDeleteError.message}`,
-    };
+    const errorMsg = (authDeleteError.message || "").toLowerCase();
+    const status = (authDeleteError as { status?: number }).status;
+    if (
+      errorMsg.includes("user not found") ||
+      errorMsg.includes("not found") ||
+      status === 404
+    ) {
+      console.warn(`Auth user ${staffId} not found in auth.users (already deleted). Proceeding to remove profile row.`);
+      authAlreadyDeleted = true;
+    } else {
+      console.error("auth.admin.deleteUser error:", authDeleteError);
+      const reason = `Admin API auth deletion failed: ${authDeleteError.message}`;
+      await auditBlockedAttempt(reason);
+      return {
+        success: false,
+        message:
+          "Failed to delete the authentication account. The staff profile has NOT been removed. " +
+          `Reason: ${authDeleteError.message}`,
+      };
+    }
   }
 
-  // D. Auth account confirmed deleted. Now delete public.profiles and write the audit log.
-  //    This call is inside a Postgres transaction so profile deletion + audit are atomic.
-  const { data: finalizeResult, error: finalizeError } = await supabase.rpc(
+  // D. Auth account confirmed deleted (or already deleted). Now delete public.profiles and write audit log.
+  //    Try the official finalize_staff_deletion RPC first with adminClient (service role)
+  let finalizeResultMsg: string | null = null;
+  const { data: finalizeResult, error: finalizeError } = await serviceClient.rpc(
     "finalize_staff_deletion",
     {
       p_staff_id:   staffId,
@@ -495,26 +546,66 @@ export async function safeDeleteStaffAction(formData: FormData): Promise<StaffAc
     }
   );
 
-  if (finalizeError) {
-    // Auth account is already deleted at this point. Profile deletion failed.
-    // This is a critical-partial state — the auth is gone but the profile row remains.
-    // Log this at CRITICAL level with a distinct status.
-    console.error("finalize_staff_deletion error (auth already deleted):", finalizeError);
-    await supabase.rpc("finalize_staff_deletion", {
-      p_staff_id:   staffId,
-      p_actor_id:   session.id,
-      p_actor_role: session.role,
-      p_staff_name: staffName,
-      p_staff_role: staffRole,
-      p_status:     "CRITICAL_PARTIAL",
-    });
-    return {
-      success: false,
-      message:
-        "The authentication account was deleted but the application profile could not be removed. " +
-        "The staff member cannot log in. Please delete the orphaned profile row manually " +
-        "from the profiles table in the Supabase database dashboard.",
-    };
+  if (!finalizeError) {
+    finalizeResultMsg = (finalizeResult as { message?: string })?.message ?? null;
+  } else {
+    // If the RPC failed (migration not applied, function missing, or permissions):
+    console.warn("finalize_staff_deletion RPC failed or not present, executing direct service-role profile deletion:", finalizeError);
+
+    const { error: directDeleteError } = await serviceClient
+      .from("profiles")
+      .delete()
+      .eq("id", staffId);
+
+    if (directDeleteError) {
+      console.error("Direct profile deletion failed:", directDeleteError);
+      await supabase.from("audit_logs").insert({
+        user_id: session.id,
+        actor_role: session.role,
+        action: "STAFF_DELETED",
+        module: "STAFF",
+        target_identifier: staffId,
+        description: `Failed to remove profile row for staff: ${staffName} (${staffRole}). Auth account was deleted.`,
+        severity: "CRITICAL",
+        status: "CRITICAL_PARTIAL",
+        before_data: { id: staffId, full_name: staffName, role: staffRole },
+        metadata: {
+          auth_deleted: true,
+          profile_deleted: false,
+          error: directDeleteError.message,
+        },
+      });
+
+      return {
+        success: false,
+        message:
+          "The authentication account was deleted, but removing the profile row encountered a database error: " +
+          directDeleteError.message,
+      };
+    }
+
+    // Direct deletion succeeded — write authoritative audit log
+    try {
+      await supabase.from("audit_logs").insert({
+        user_id: session.id,
+        actor_role: session.role,
+        action: "STAFF_DELETED",
+        module: "STAFF",
+        target_identifier: staffId,
+        description: `Permanently deleted staff account: ${staffName} (${staffRole})`,
+        severity: "CRITICAL",
+        status: "SUCCESS",
+        before_data: { id: staffId, full_name: staffName, role: staffRole },
+        metadata: {
+          auth_deleted: true,
+          profile_deleted: true,
+          auth_already_deleted: authAlreadyDeleted,
+          direct_fallback: true,
+        },
+      });
+    } catch (auditErr) {
+      console.error("Failed to write staff deletion audit log:", auditErr);
+    }
   }
 
   // E. Full success — both auth.users and public.profiles deleted.
@@ -525,7 +616,7 @@ export async function safeDeleteStaffAction(formData: FormData): Promise<StaffAc
   return {
     success: true,
     message:
-      finalizeResult?.message ??
+      finalizeResultMsg ??
       `Staff account for ${staffName} has been permanently and fully deleted.`,
   };
 }

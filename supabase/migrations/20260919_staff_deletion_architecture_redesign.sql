@@ -1,4 +1,4 @@
-﻿-- Migration: 20260919_staff_deletion_architecture_redesign.sql
+-- Migration: 20260919_staff_deletion_architecture_redesign.sql
 -- Staff Deletion Architecture Redesign
 --
 -- Problem with previous architecture (20260918):
@@ -55,8 +55,12 @@ AS $$
 DECLARE
   v_profile_deleted boolean := false;
 BEGIN
-  -- Guard: only admin may finalize deletions
-  IF NOT public.is_admin() THEN
+  -- Guard: only admin or service_role may finalize deletions
+  IF NOT (
+    public.is_admin()
+    OR coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role'
+    OR coalesce(current_setting('role', true), '') = 'service_role'
+  ) THEN
     RAISE EXCEPTION 'Only administrators can finalize staff account deletion';
   END IF;
 
@@ -110,7 +114,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.finalize_staff_deletion(uuid, uuid, text, text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.finalize_staff_deletion(uuid, uuid, text, text, text, text) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
 -- 2. audit_failed_deletion_attempt
@@ -132,7 +136,11 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT public.is_admin() THEN
+  IF NOT (
+    public.is_admin()
+    OR coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role'
+    OR coalesce(current_setting('role', true), '') = 'service_role'
+  ) THEN
     RAISE EXCEPTION 'Only administrators can record deletion attempts';
   END IF;
 
@@ -170,7 +178,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.audit_failed_deletion_attempt(uuid, uuid, text, text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.audit_failed_deletion_attempt(uuid, uuid, text, text, text, text) TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
 -- 3. Retire delete_staff_account
