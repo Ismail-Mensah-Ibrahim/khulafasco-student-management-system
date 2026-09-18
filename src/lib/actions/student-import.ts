@@ -12,6 +12,7 @@ import {
   type Gender,
   type BoardingType,
 } from "@/config/constants";
+import { getHouseDistributionData, batchAssignBalancedHouses } from "@/lib/services/house-allocation";
 
 export interface RawImportRow {
   jhs_index_number?: string;
@@ -338,7 +339,8 @@ export async function validateStudentImportAction(
 
 export async function executeStudentImportAction(
   rows: ValidatedImportRow[],
-  mode: "new_only" | "update_existing"
+  mode: "new_only" | "update_existing",
+  houseAllocationMode: "auto_balanced" | "csv_column" | "unassigned" = "auto_balanced"
 ): Promise<ImportExecutionResult> {
   const session = await requireAdmin();
   const supabase = await createClient();
@@ -362,18 +364,37 @@ export async function executeStudentImportAction(
     actor_role: session.role,
     action: "STUDENT_IMPORT_STARTED",
     module: "STUDENT",
-    description: `Initiated bulk student import for ${rows.length} records (mode: ${mode})`,
+    description: `Initiated bulk student import for ${rows.length} records (mode: ${mode}, houseMode: ${houseAllocationMode})`,
     severity: "INFO",
     status: "SUCCESS",
-    metadata: { total_rows: rows.length, mode },
+    metadata: { total_rows: rows.length, mode, houseAllocationMode },
   });
+
+  let processedRows = rows;
+  if (houseAllocationMode === "auto_balanced") {
+    try {
+      const distributions = await getHouseDistributionData(supabase);
+      if (distributions.length > 0) {
+        const batchResult = batchAssignBalancedHouses(rows, distributions);
+        processedRows = batchResult.assignedItems.map((item) => ({
+          ...item,
+          house_id: item.house_id,
+          house_name: item.house_name,
+        }));
+      }
+    } catch (allocErr) {
+      console.warn("Auto-balance during bulk import fallback:", allocErr);
+    }
+  } else if (houseAllocationMode === "unassigned") {
+    processedRows = rows.map((r) => ({ ...r, house_id: null, house_name: null }));
+  }
 
   let insertedCount = 0;
   let updatedCount = 0;
   let skippedCount = 0;
   const executionErrors: { row: number; index: string; error: string }[] = [];
 
-  for (const row of rows) {
+  for (const row of processedRows) {
     try {
       if (row.isExisting && mode === "new_only") {
         skippedCount++;

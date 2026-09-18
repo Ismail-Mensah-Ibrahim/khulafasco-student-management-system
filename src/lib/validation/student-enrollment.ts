@@ -48,7 +48,7 @@ export const studentEnrollmentSchema = z.object({
   parent_address: optionalText(300),
   program_id: z.string().uuid("Select a valid program."),
   house_id: z.preprocess(
-    (value) => (value === "" ? null : value),
+    (value) => (value === "" || value === "auto" ? null : value),
     z.string().uuid("Select a valid house.").nullable()
   ),
   student_type: z.enum(BOARDING_TYPES, { errorMap: () => ({ message: "Select a student type." }) }),

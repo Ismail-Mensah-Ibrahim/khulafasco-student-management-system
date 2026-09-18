@@ -10,15 +10,15 @@ export type AcademicActionResult =
   | { success: false; message: string };
 
 function calculateGradeAndRemarks(total: number): { grade: string; remarks: string } {
-  if (total >= 80) return { grade: "1", remarks: "Excellent" };
-  if (total >= 70) return { grade: "2", remarks: "Very Good" };
-  if (total >= 65) return { grade: "3", remarks: "Good" };
-  if (total >= 60) return { grade: "4", remarks: "Credit" };
-  if (total >= 55) return { grade: "5", remarks: "Credit" };
-  if (total >= 50) return { grade: "6", remarks: "Pass" };
-  if (total >= 45) return { grade: "7", remarks: "Pass" };
-  if (total >= 40) return { grade: "8", remarks: "Pass" };
-  return { grade: "9", remarks: "Fail" };
+  if (total >= 80) return { grade: "A1", remarks: "Excellent" };
+  if (total >= 70) return { grade: "B2", remarks: "Very Good" };
+  if (total >= 65) return { grade: "B3", remarks: "Good" };
+  if (total >= 60) return { grade: "C4", remarks: "Credit" };
+  if (total >= 55) return { grade: "C5", remarks: "Credit" };
+  if (total >= 50) return { grade: "C6", remarks: "Credit" };
+  if (total >= 45) return { grade: "D7", remarks: "Pass" };
+  if (total >= 40) return { grade: "E8", remarks: "Pass" };
+  return { grade: "F9", remarks: "Fail" };
 }
 
 export async function recordAttendanceAction(
@@ -78,6 +78,9 @@ export async function submitStudentResultAction(
   const term = String(formData.get("term") || "Term 1");
   const assessmentScore = Number(formData.get("assessment_score") || 0);
   const examScore = Number(formData.get("exam_score") || 0);
+  const conduct = String(formData.get("conduct") || "").trim() || null;
+  const punctuality = String(formData.get("punctuality") || "").trim() || null;
+  const teacherComment = String(formData.get("teacher_comment") || "").trim() || null;
 
   if (!studentId || !classId || !subjectId || !academicYearId) {
     return { success: false, message: "Missing required academic result identifiers." };
@@ -104,6 +107,9 @@ export async function submitStudentResultAction(
       total_score: totalScore,
       grade,
       remarks,
+      conduct,
+      punctuality,
+      teacher_comment: teacherComment,
       status: "submitted",
       submitted_by: session.id,
       updated_at: new Date().toISOString(),

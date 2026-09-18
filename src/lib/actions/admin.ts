@@ -141,22 +141,131 @@ export async function deleteAcademicYearAction(formData: FormData): Promise<void
 }
 
 export async function createHouseAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const session = await requireAdmin();
   const supabase = await createClient();
   const name = getText(formData, "name");
+  const code = getText(formData, "code");
+  const capacityStr = getText(formData, "capacity");
 
   if (!name) {
     redirect("/admin/houses");
   }
 
-  const { error } = await supabase.from("houses").insert({ name });
+  const capacity = capacityStr ? parseInt(capacityStr, 10) : 150;
+
+  const { error } = await supabase.from("houses").insert({
+    name,
+    code: code || name.slice(0, 3).toUpperCase(),
+    capacity: isNaN(capacity) ? 150 : capacity,
+    is_active: true,
+  });
 
   if (error) {
     console.error("createHouseAction error:", error);
+  } else {
+    await supabase.from("audit_logs").insert({
+      user_id: session.id,
+      actor_role: session.role,
+      action: "HOUSE_CREATED",
+      module: "SETTINGS",
+      target_identifier: name,
+      description: `Created new house "${name}" with capacity ${capacity}`,
+      severity: "INFO",
+      status: "SUCCESS",
+    });
   }
 
   revalidatePath("/admin/houses");
   redirect("/admin/houses");
+}
+
+export async function updateHouseAction(formData: FormData): Promise<{ success: boolean; message: string }> {
+  const session = await requireAdmin();
+  const supabase = await createClient();
+  const id = getText(formData, "id");
+  const name = getText(formData, "name");
+  const code = getText(formData, "code");
+  const capacityStr = getText(formData, "capacity");
+  const isActive = formData.get("is_active") === "true" || formData.get("is_active") === "on";
+
+  if (!id || !name) {
+    return { success: false, message: "House ID and name are required." };
+  }
+
+  const capacity = capacityStr ? parseInt(capacityStr, 10) : 150;
+
+  const { error } = await supabase
+    .from("houses")
+    .update({
+      name,
+      code: code || name.slice(0, 3).toUpperCase(),
+      capacity: isNaN(capacity) ? 150 : capacity,
+      is_active: isActive,
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("updateHouseAction error:", error);
+    return { success: false, message: "Failed to update house: " + error.message };
+  }
+
+  await supabase.from("audit_logs").insert({
+    user_id: session.id,
+    actor_role: session.role,
+    action: "HOUSE_UPDATED",
+    module: "SETTINGS",
+    target_identifier: name,
+    description: `Updated house settings for ${name} (capacity: ${capacity}, active: ${isActive})`,
+    severity: "INFO",
+    status: "SUCCESS",
+  });
+
+  revalidatePath("/admin/houses");
+  return { success: true, message: `House ${name} updated successfully.` };
+}
+
+export async function rebalanceHousesAction(
+  moves: { studentId: string; toHouseId: string }[]
+): Promise<{ success: boolean; message: string; movesApplied: number }> {
+  const session = await requireAdmin();
+  const supabase = await createClient();
+
+  if (!moves || moves.length === 0) {
+    return { success: false, message: "No moves provided for rebalancing.", movesApplied: 0 };
+  }
+
+  let applied = 0;
+  for (const move of moves) {
+    const { error } = await supabase
+      .from("students")
+      .update({ house_id: move.toHouseId, updated_at: new Date().toISOString() })
+      .eq("id", move.studentId);
+
+    if (!error) {
+      applied++;
+    }
+  }
+
+  await supabase.from("audit_logs").insert({
+    user_id: session.id,
+    actor_role: session.role,
+    action: "HOUSE_REBALANCE_EXECUTED",
+    module: "STUDENT",
+    description: `Executed automated house rebalancing across houses. Successfully reassigned ${applied} of ${moves.length} students.`,
+    severity: "INFO",
+    status: applied === moves.length ? "SUCCESS" : "WARNING",
+    metadata: { totalRequested: moves.length, applied },
+  });
+
+  revalidatePath("/admin/houses");
+  revalidatePath("/students");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    message: `Successfully rebalanced houses. ${applied} student${applied === 1 ? "" : "s"} reassigned.`,
+    movesApplied: applied,
+  };
 }
 
 export async function createProgramAction(formData: FormData): Promise<void> {

@@ -51,6 +51,9 @@ export interface Program {
 export interface House {
   id: string;
   name: string;
+  code?: string | null;
+  capacity?: number | null;
+  is_active?: boolean;
   created_at: string;
 }
 
@@ -359,6 +362,10 @@ export interface StudentResult {
   total_score: number | null;
   grade: string | null;
   remarks: string | null;
+  conduct?: string | null;
+  punctuality?: string | null;
+  teacher_comment?: string | null;
+  gpa?: number | null;
   status: ResultStatus;
   submitted_by: string | null;
   approved_by: string | null;
@@ -367,6 +374,81 @@ export interface StudentResult {
   student?: Student;
   subject?: Subject;
   class?: SchoolClass;
+}
+
+// ---------------------------------------------------------------------------
+// Student Transfer Process (STP) Types
+// ---------------------------------------------------------------------------
+
+export type TransferDirection = "transfer_in" | "transfer_out";
+
+export type TransferStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "academic_verification"
+  | "academic_clearance"
+  | "finance_clearance"
+  | "approved"
+  | "enrolled"
+  | "completed"
+  | "rejected"
+  | "cancelled";
+
+export type ClearanceStatus = "pending" | "cleared" | "flagged" | "waived";
+
+export interface StudentTransfer {
+  id: string;
+  transfer_reference: string;
+  direction: TransferDirection;
+  student_id: string | null;
+  jhs_index_number: string;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  gender: Gender;
+  date_of_birth: string | null;
+  previous_school: string | null;
+  destination_school: string | null;
+  transfer_date: string;
+  previous_form: string | null;
+  previous_class: string | null;
+  previous_academic_year: string | null;
+  target_academic_year_id: string | null;
+  target_semester_id: string | null;
+  target_form: FormLevel | string | null;
+  target_program_id: string | null;
+  target_class_id: string | null;
+  target_house_id: string | null;
+  reason: string | null;
+  documentation_notes: string | null;
+  remarks: string | null;
+  status: TransferStatus;
+  academic_clearance_status: ClearanceStatus;
+  academic_clearance_notes: string | null;
+  academic_cleared_by: string | null;
+  academic_cleared_at: string | null;
+  finance_clearance_status: ClearanceStatus;
+  finance_total_due: number;
+  finance_total_paid: number;
+  finance_balance: number;
+  finance_clearance_notes: string | null;
+  finance_cleared_by: string | null;
+  finance_cleared_at: string | null;
+  created_by: string | null;
+  reviewed_by: string | null;
+  approved_by: string | null;
+  completed_by: string | null;
+  created_at: string;
+  updated_at: string;
+  student?: Student;
+  target_academic_year?: AcademicYear;
+  target_program?: Program;
+  target_class?: SchoolClass;
+  target_house?: House;
+  creator?: Profile;
+  reviewer?: Profile;
+  approver?: Profile;
 }
 
 // ---------------------------------------------------------------------------

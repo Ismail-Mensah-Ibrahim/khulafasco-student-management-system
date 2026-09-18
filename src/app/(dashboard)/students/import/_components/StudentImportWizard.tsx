@@ -39,6 +39,7 @@ export function StudentImportWizard() {
   const [importMode, setImportMode] = useState<"new_only" | "update_existing">("new_only");
 
   const [isPending, startTransition] = useTransition();
+  const [houseAllocationMode, setHouseAllocationMode] = useState<"auto_balanced" | "csv_column" | "unassigned">("auto_balanced");
   const [validation, setValidation] = useState<ImportValidationSummary | null>(null);
   const [executionResult, setExecutionResult] = useState<ImportExecutionResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -131,7 +132,7 @@ export function StudentImportWizard() {
 
     startTransition(async () => {
       try {
-        const result = await executeStudentImportAction(validation.validRows, importMode);
+        const result = await executeStudentImportAction(validation.validRows, importMode, houseAllocationMode);
         setExecutionResult(result);
         setStep(6); // Result Report
       } catch (err: unknown) {
@@ -449,6 +450,76 @@ export function StudentImportWizard() {
                       <p className="text-xs font-semibold text-foreground">Update & Re-Enroll Existing</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         Update existing profiles with new contact details and create academic enrollment records.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                  House Allocation Strategy:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <label
+                    className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer ${
+                      houseAllocationMode === "auto_balanced" ? "border-primary bg-primary/[0.03]" : "border-border"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="houseAllocationMode"
+                      value="auto_balanced"
+                      checked={houseAllocationMode === "auto_balanced"}
+                      onChange={() => setHouseAllocationMode("auto_balanced")}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Auto-Balance (Recommended)</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Evenly balance male & female students across active houses respecting capacities.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer ${
+                      houseAllocationMode === "csv_column" ? "border-primary bg-primary/[0.03]" : "border-border"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="houseAllocationMode"
+                      value="csv_column"
+                      checked={houseAllocationMode === "csv_column"}
+                      onChange={() => setHouseAllocationMode("csv_column")}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Use CSV House Column</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Assign exactly the house name mapped from the imported file.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer ${
+                      houseAllocationMode === "unassigned" ? "border-primary bg-primary/[0.03]" : "border-border"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="houseAllocationMode"
+                      value="unassigned"
+                      checked={houseAllocationMode === "unassigned"}
+                      onChange={() => setHouseAllocationMode("unassigned")}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Leave Unassigned</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Enroll without house affiliation; assign houses manually later.
                       </p>
                     </div>
                   </label>

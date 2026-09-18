@@ -231,7 +231,10 @@ export function EnrollmentForm({ academicYears, programs, houses }: EnrollmentFo
             name="house_id"
             label="House"
             error={errorFor("house_id")}
-            options={houses.map((house) => ({ value: house.id, label: house.name }))}
+            options={[
+              { value: "auto", label: "Auto-Assign (Gender-Balanced)" },
+              ...houses.map((house) => ({ value: house.id, label: house.name })),
+            ]}
           />
           <SelectField
             name="student_type"
