@@ -83,10 +83,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               <div className="w-full rounded-xl overflow-hidden border shadow-xs" style={{ borderColor: 'var(--border)' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`/api/student-photo/${encodeURIComponent(student.jhs_index_number)}`}
+                  src={student.photo_path.startsWith('data:') ? student.photo_path : `/api/student-photo/${encodeURIComponent(student.jhs_index_number)}`}
                   alt={`${fullName} photo`}
                   className="w-full h-72 object-cover"
                 />
+
               </div>
             ) : (
               <div className="w-full h-72 rounded-xl border border-dashed flex flex-col items-center justify-center p-4 text-center bg-muted/20" style={{ borderColor: 'var(--border)' }}>

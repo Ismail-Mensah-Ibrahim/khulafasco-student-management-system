@@ -15,7 +15,11 @@ import {
   GENDER_LABELS,
   GUARDIAN_RELATIONSHIPS,
 } from "@/config/constants";
-import { updateStudentAction, type UpdateStudentState } from "@/lib/actions/students";
+import {
+  updateStudentAction,
+  uploadStudentPhotoAction,
+  type UpdateStudentState,
+} from "@/lib/actions/students";
 import { StudentPhotoCapture } from "@/components/shared/StudentPhotoCapture";
 import type { AcademicYear, House, Program, Student } from "@/types";
 
@@ -75,18 +79,15 @@ export function StudentEditForm({
       formData.append("photo", selectedPhoto);
 
       try {
-        const response = await fetch("/api/student-photo/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const result = (await response.json()) as { error?: string; success?: boolean };
-        if (!response.ok || !result.success) {
-          throw new Error(result.error ?? "Unable to upload the student photo.");
+        const result = await uploadStudentPhotoAction(formData);
+        if (!result.success) {
+          throw new Error(result.error);
         }
         if (!cancelled) setUploadStatus("success");
       } catch (error) {
         if (!cancelled) {
-          setPhotoError(error instanceof Error ? error.message : "Unable to upload the student photo.");
+          const msg = error instanceof Error ? error.message : "Unable to upload the student photo.";
+          setPhotoError(msg === "Failed to fetch" ? "Network connection interrupted. Please try again." : msg);
           setUploadStatus("error");
         }
       }
@@ -109,22 +110,20 @@ export function StudentEditForm({
     formData.append("photo", selectedPhoto);
 
     try {
-      const response = await fetch("/api/student-photo/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const result = (await response.json()) as { error?: string; success?: boolean };
-      if (!response.ok || !result.success) {
-        throw new Error(result.error ?? "Unable to upload the student photo.");
+      const result = await uploadStudentPhotoAction(formData);
+      if (!result.success) {
+        throw new Error(result.error);
       }
       setDirectSuccessMessage("Photograph uploaded and updated successfully!");
       setSelectedPhoto(null);
     } catch (error) {
-      setPhotoError(error instanceof Error ? error.message : "Unable to upload the student photo.");
+      const msg = error instanceof Error ? error.message : "Unable to upload the student photo.";
+      setPhotoError(msg === "Failed to fetch" ? "Network connection interrupted. Please try again." : msg);
     } finally {
       setDirectUploading(false);
     }
   };
+
 
 
   return (

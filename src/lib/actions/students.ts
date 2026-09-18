@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/dal";
-import { createClient } from "@/lib/supabase/server";
-import { removeStudentPhoto } from "@/lib/storage/student-photos";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { STUDENT_PHOTOS_BUCKET, removeStudentPhoto, uploadStudentPhoto } from "@/lib/storage/student-photos";
 import { normalizeIndexNumber } from "@/lib/utils";
 import {
   studentEnrollmentSchema,
@@ -269,4 +269,111 @@ export async function deleteStudentAction(jhsIndexNumber: string): Promise<Delet
   revalidatePath("/finance");
 
   return { success: true, message: "Student record has been permanently deleted." };
+}
+
+export type UploadPhotoResult =
+  | { success: true; photoPath: string }
+  | { success: false; error: string };
+
+export async function uploadStudentPhotoAction(formData: FormData): Promise<UploadPhotoResult> {
+  await requireAdmin();
+
+  const studentId = formData.get("studentId");
+  const photo = formData.get("photo");
+
+  if (typeof studentId !== "string" || !studentId.trim()) {
+    return { success: false, error: "Invalid student reference." };
+  }
+
+  if (!(photo instanceof File) || photo.size <= 0) {
+    return { success: false, error: "A valid student photograph is required." };
+  }
+
+  const supabase = await createClient();
+  const adminClient = createAdminClient();
+  const storageClient = adminClient ?? supabase;
+
+  // Verify student exists
+  const { data: student, error: studentError } = await supabase
+    .from("students")
+    .select("id, jhs_index_number, photo_path")
+    .eq("id", studentId)
+    .maybeSingle();
+
+  if (studentError || !student) {
+    return { success: false, error: "Student record not found." };
+  }
+
+  const oldPhotoPath = student.photo_path;
+  let savedPhotoPath: string | null = null;
+
+  // Attempt storage upload
+  try {
+    if (adminClient) {
+      try {
+        const { data: bucket } = await adminClient.storage.getBucket(STUDENT_PHOTOS_BUCKET);
+        if (!bucket) {
+          await adminClient.storage.createBucket(STUDENT_PHOTOS_BUCKET, {
+            public: false,
+            fileSizeLimit: 5242880,
+            allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+          });
+        }
+      } catch {
+        // Non-fatal; proceed to upload
+      }
+    }
+
+    savedPhotoPath = await uploadStudentPhoto(storageClient, student.id, photo);
+  } catch (storageErr) {
+    console.warn("Storage upload failed, attempting embedded image fallback:", storageErr);
+
+    // If storage upload fails (e.g. bucket does not exist yet), embed as optimized base64 data URI
+    // only if the image is within safe database size (< 500 KB)
+    if (photo.size <= 500 * 1024) {
+      try {
+        const buffer = Buffer.from(await photo.arrayBuffer());
+        const base64 = buffer.toString("base64");
+        savedPhotoPath = `data:${photo.type || "image/jpeg"};base64,${base64}`;
+      } catch {
+        return {
+          success: false,
+          error: storageErr instanceof Error ? storageErr.message : "Unable to upload student photo.",
+        };
+      }
+    } else {
+      return {
+        success: false,
+        error: storageErr instanceof Error ? storageErr.message : "Unable to upload student photo.",
+      };
+    }
+  }
+
+  // Update student database record with new photo path or data URI
+  const { error: updateError } = await supabase
+    .from("students")
+    .update({ photo_path: savedPhotoPath })
+    .eq("id", student.id);
+
+  if (updateError) {
+    if (savedPhotoPath && !savedPhotoPath.startsWith("data:")) {
+      try {
+        await removeStudentPhoto(storageClient, savedPhotoPath);
+      } catch {}
+    }
+    return { success: false, error: "Failed to update student photo in database." };
+  }
+
+  // Clean up old photo if it was in storage and different
+  if (oldPhotoPath && !oldPhotoPath.startsWith("data:") && oldPhotoPath !== savedPhotoPath) {
+    try {
+      await removeStudentPhoto(storageClient, oldPhotoPath);
+    } catch {}
+  }
+
+  revalidatePath(`/students/${encodeURIComponent(student.jhs_index_number)}`);
+  revalidatePath(`/students/${encodeURIComponent(student.jhs_index_number)}/edit`);
+  revalidatePath("/students");
+
+  return { success: true, photoPath: savedPhotoPath };
 }

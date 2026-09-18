@@ -230,23 +230,101 @@ export function StudentPhotoCapture({
     );
   }
 
-  // Validate and handle file selection from input
-  function handleFileSelected(file: File | null) {
+// Compress and resize any selected/uploaded image to standard passport dimensions
+async function compressAndOptimizeImage(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      img.src = e.target?.result as string;
+    };
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let width = img.naturalWidth || img.width;
+      let height = img.naturalHeight || img.height;
+
+      // Standard passport portrait target max: 800 x 1000
+      const MAX_WIDTH = 800;
+      const MAX_HEIGHT = 1000;
+
+      if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+        if (width / height > MAX_WIDTH / MAX_HEIGHT) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        } else {
+          width = Math.round((width * MAX_HEIGHT) / height);
+          height = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const safeName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+          const compressed = new File([blob], safeName, {
+            type: "image/jpeg",
+            lastModified: Date.now(),
+          });
+          resolve(compressed);
+        },
+        "image/jpeg",
+        0.88
+      );
+    };
+
+    img.onerror = () => {
+      resolve(file);
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+  // Validate, optimize and handle file selection from input
+  async function handleFileSelected(file: File | null) {
     setClientError(null);
     if (!file) return;
 
-    if (!(STUDENT_PHOTO_TYPES as readonly string[]).includes(file.type)) {
+    if (!(STUDENT_PHOTO_TYPES as readonly string[]).includes(file.type) && !file.type.startsWith("image/")) {
       setClientError("Unsupported format. Please select a JPEG, PNG, or WebP photo.");
       return;
     }
 
-    if (file.size <= 0 || file.size > STUDENT_PHOTO_MAX_BYTES) {
-      setClientError("File too large. Student photo must be smaller than 5 MB.");
+    if (file.size <= 0) {
+      setClientError("File is empty.");
       return;
     }
 
-    onChange(file);
+    try {
+      const optimized = await compressAndOptimizeImage(file);
+      onChange(optimized);
+    } catch {
+      if (file.size > STUDENT_PHOTO_MAX_BYTES) {
+        setClientError("File too large. Student photo must be smaller than 5 MB.");
+        return;
+      }
+      onChange(file);
+    }
   }
+
 
   function handleClear() {
     setClientError(null);
@@ -423,7 +501,7 @@ export function StudentPhotoCapture({
         </div>
       </div>
 
-      {/* â”€â”€ Camera Capture & Scanner Dialog â”€â”€ */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Camera Capture & Scanner Dialog Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <Dialog open={isCameraOpen} onOpenChange={(open) => !open && closeCameraDialog()}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-zinc-950 text-zinc-100 border-zinc-800">
           <DialogHeader className="p-4 border-b border-zinc-800">
