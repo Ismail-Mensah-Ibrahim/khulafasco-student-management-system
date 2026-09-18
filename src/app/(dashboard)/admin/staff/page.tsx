@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import { ShieldCheck, Users } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { SCHOOL } from "@/config/branding";
-import { ROLE_LABELS } from "@/config/constants";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { DataTable } from "@/components/shared/DataTable";
-import { Badge } from "@/components/ui/badge";
 import { requireAdmin } from "@/lib/dal";
 import { getStaffProfiles } from "@/lib/data";
 import { StaffCreateForm } from "../_components/AdminCreateForms";
+import { StaffManagementClient } from "./_components/StaffManagementClient";
 
 export const metadata: Metadata = {
   title: `Staff Access | ${SCHOOL.shortName}`,
@@ -67,77 +65,11 @@ export default async function StaffAccessPage() {
         </div>
       </section>
 
-      {/* Staff Directory Table */}
-      <section
-        className="rounded-xl border p-6"
-        style={{
-          background: "var(--surface)",
-          borderColor: "var(--border)",
-          boxShadow: "var(--shadow-sm)",
-        }}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
-              Registered Staff Accounts ({staffList.length})
-            </h2>
-          </div>
-        </div>
-
-        <DataTable
-          data={staffList}
-          keyField="id"
-          emptyMessage="No staff profiles found."
-          columns={[
-            {
-              key: "full_name",
-              header: "Staff Name",
-              cell: (staff) => (
-                <div>
-                  <p className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>
-                    {staff.full_name}
-                  </p>
-                  {staff.phone && (
-                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                      {staff.phone}
-                    </p>
-                  )}
-                </div>
-              ),
-            },
-            {
-              key: "role",
-              header: "Role / Designation",
-              cell: (staff) => (
-                <Badge variant="outline" className="text-xs font-semibold">
-                  {(ROLE_LABELS as Record<string, string>)[staff.role] ?? staff.role}
-                </Badge>
-              ),
-            },
-            {
-              key: "is_active",
-              header: "Account Status",
-              cell: (staff) => (
-                <Badge
-                  variant={staff.is_active ? "default" : "destructive"}
-                  className="text-xs"
-                >
-                  {staff.is_active ? "Active" : "Disabled"}
-                </Badge>
-              ),
-            },
-            {
-              key: "created_at",
-              header: "Created Date",
-              cell: (staff) =>
-                new Date(staff.created_at).toLocaleDateString("en-GH", {
-                  dateStyle: "medium",
-                }),
-            },
-          ]}
-        />
-      </section>
+      {/* Staff Management & Directory */}
+      <StaffManagementClient
+        initialStaffList={staffList}
+        currentUserId={session.id}
+      />
     </div>
   );
 }

@@ -6,6 +6,8 @@
 import type {
   AcademicTerm,
   AttendanceStatus,
+  AuditModule,
+  AuditSeverity,
   BoardingType,
   EnrollmentStatus,
   FormLevel,
@@ -17,6 +19,7 @@ import type {
   PaymentMethodValue,
   PaymentStatus,
   PaymentTransactionStatus,
+  PromotionStatus,
   RequestCategory,
   RequestPriority,
   RequestStatus,
@@ -172,10 +175,20 @@ export interface PaymentAllocation {
 export interface AuditLog {
   id: string;
   user_id: string;
+  actor_role?: string | null;
   action: string;
+  module?: AuditModule | string | null;
   entity_type: string;
   entity_id: string | null;
+  target_identifier?: string | null;
   description: string | null;
+  status?: string | null;
+  severity?: AuditSeverity | string | null;
+  before_data?: Record<string, unknown> | null;
+  after_data?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
   created_at: string;
   profile?: Profile;
 }
@@ -234,16 +247,61 @@ export type ActionResult<T = void> =
 // Academic Management Types
 // ---------------------------------------------------------------------------
 
+export interface Semester {
+  id: string;
+  academic_year_id: string;
+  name: string;
+  semester_number: number;
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+  created_at: string;
+  updated_at: string;
+  academic_year?: AcademicYear;
+}
+
 export interface SchoolClass {
   id: string;
   name: string;
   form_level: FormLevel | string;
+  stream?: string | null;
+  capacity?: number;
+  is_active?: boolean;
   program_id: string | null;
   academic_year_id: string;
   class_teacher_id: string | null;
   created_at: string;
+  updated_at?: string;
   program?: Program;
   class_teacher?: Profile;
+}
+
+export interface StudentAcademicEnrollment {
+  id: string;
+  student_id: string;
+  academic_year_id: string;
+  semester_id: string | null;
+  level: FormLevel | string;
+  class_id: string | null;
+  enrollment_status: string;
+  promotion_status: PromotionStatus | null;
+  start_date: string | null;
+  end_date: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  student?: Student;
+  academic_year?: AcademicYear;
+  semester?: Semester;
+  class?: SchoolClass;
+}
+
+export interface StaffDeletionSafety {
+  safe: boolean;
+  total_references: number;
+  reasons: string[];
+  recommendation: string;
 }
 
 export interface Subject {

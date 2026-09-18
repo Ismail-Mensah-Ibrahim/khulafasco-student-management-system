@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { BOARDING_TYPES, ENROLLMENT_STATUSES, GENDERS, GENDER_LABELS, GUARDIAN_RELATIONSHIPS } from "@/config/constants";
 import { createStudentAction, type EnrollmentState } from "@/lib/actions/students";
-import { STUDENT_PHOTO_MAX_BYTES, STUDENT_PHOTO_TYPES } from "@/lib/storage/student-photos";
+import { StudentPhotoCapture } from "@/components/shared/StudentPhotoCapture";
 import type { AcademicYear, House, Program } from "@/types";
+
 
 interface EnrollmentFormProps {
   academicYears: AcademicYear[];
@@ -93,19 +94,11 @@ function SelectField({
 export function EnrollmentForm({ academicYears, programs, houses }: EnrollmentFormProps) {
   const [state, formAction] = useActionState<EnrollmentState, FormData>(createStudentAction, undefined);
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [retryToken, setRetryToken] = useState(0);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const fieldErrors = state && !state.success ? state.fieldErrors ?? {} : {};
   const errorFor = (name: string) => fieldErrors[name]?.[0];
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
 
   useEffect(() => {
     if (!state?.success) return;
@@ -143,42 +136,6 @@ export function EnrollmentForm({ academicYears, programs, houses }: EnrollmentFo
     };
   }, [retryToken, selectedPhoto, state]);
 
-  function clearPhoto() {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setSelectedPhoto(null);
-    setPreviewUrl(null);
-    setPhotoError(null);
-    if (photoInputRef.current) photoInputRef.current.value = "";
-  }
-
-  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
-    setPhotoError(null);
-
-    if (!file) {
-      clearPhoto();
-      return;
-    }
-
-    if (!(STUDENT_PHOTO_TYPES as readonly string[]).includes(file.type)) {
-      setSelectedPhoto(null);
-      setPhotoError("Choose a JPEG, PNG, or WebP image.");
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size <= 0 || file.size > STUDENT_PHOTO_MAX_BYTES) {
-      setSelectedPhoto(null);
-      setPhotoError("The photo must be smaller than 5 MB.");
-      event.target.value = "";
-      return;
-    }
-
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setSelectedPhoto(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    setUploadStatus("idle");
-  }
 
   return (
     <form action={formAction} className="space-y-8">
@@ -238,32 +195,22 @@ export function EnrollmentForm({ academicYears, programs, houses }: EnrollmentFo
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className="space-y-3">
         <div>
           <h2 className="text-base font-semibold">Student photo</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Optional. JPEG, PNG, or WebP, up to 5 MB.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Optional. Scan with camera, capture live photo, or upload an image file (JPEG, PNG, WebP up to 5 MB).</p>
         </div>
-        <div className="space-y-3">
-          <Input
-            ref={photoInputRef}
-            id="photo"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handlePhotoChange}
-            aria-invalid={Boolean(photoError)}
-          />
-          {photoError ? <p className="text-xs text-destructive">{photoError}</p> : null}
-          {previewUrl ? (
-            <div className="flex items-start gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={previewUrl} alt="Selected student photo preview" className="h-28 w-28 rounded-lg object-cover" />
-              <Button type="button" variant="outline" size="sm" onClick={clearPhoto}>
-                Remove photo
-              </Button>
-            </div>
-          ) : null}
-        </div>
+        <StudentPhotoCapture
+          value={selectedPhoto}
+          onChange={(file) => {
+            setSelectedPhoto(file);
+            setPhotoError(null);
+            setUploadStatus("idle");
+          }}
+          error={photoError}
+        />
       </section>
+
 
       <section className="space-y-4">
         <h2 className="text-base font-semibold">Enrollment details</h2>

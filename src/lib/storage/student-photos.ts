@@ -85,7 +85,17 @@ export async function uploadStudentPhoto(
   });
 
   if (error) {
-    throw new StudentPhotoStorageError("Unable to upload student photo.");
+    const msg = error.message || "";
+    if (
+      msg.includes("NoSuchBucket") ||
+      msg.includes("Bucket not found") ||
+      msg.toLowerCase().includes("not found")
+    ) {
+      throw new StudentPhotoStorageError(
+        "Storage bucket 'student-photos' does not exist. Please run migration 20260920_student_photos_storage.sql in the Supabase Dashboard SQL Editor."
+      );
+    }
+    throw new StudentPhotoStorageError(`Unable to upload student photo: ${error.message}`);
   }
 
   return path;
@@ -94,6 +104,6 @@ export async function uploadStudentPhoto(
 export async function removeStudentPhoto(supabase: SupabaseClient, path: string): Promise<void> {
   const { error } = await supabase.storage.from(STUDENT_PHOTOS_BUCKET).remove([path]);
   if (error) {
-    throw new StudentPhotoStorageError("Unable to clean up student photo.");
+    throw new StudentPhotoStorageError(`Unable to clean up student photo: ${error.message}`);
   }
 }

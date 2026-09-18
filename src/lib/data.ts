@@ -9,7 +9,24 @@ import {
   type StudentFinanceResult,
   type StudentFinancialReconciliation,
 } from "@/lib/validation/finance";
-import type { AcademicYear, AuditLog, FeeType, House, Program, Student, SchoolClass, Subject, RequestRecord, ITTicket, AttendanceRecord, StudentResult, Profile } from "@/types";
+import type {
+  AcademicYear,
+  AuditLog,
+  FeeType,
+  House,
+  Program,
+  Semester,
+  Student,
+  SchoolClass,
+  StaffDeletionSafety,
+  StudentAcademicEnrollment,
+  Subject,
+  RequestRecord,
+  ITTicket,
+  AttendanceRecord,
+  StudentResult,
+  Profile,
+} from "@/types";
 
 export interface DashboardProgramStat {
   name: string;
@@ -300,16 +317,85 @@ export async function getFeeTypes(options: { throwOnError?: boolean } = {}): Pro
   return (data ?? []) as FeeType[];
 }
 
-export async function getAuditLogs(options: { throwOnError?: boolean } = {}): Promise<AuditLog[]> {
+export interface AuditLogFilters {
+  fromDate?: string;
+  toDate?: string;
+  userId?: string;
+  actorRole?: string;
+  module?: string;
+  severity?: string;
+  status?: string;
+  action?: string;
+  targetIdentifier?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+  throwOnError?: boolean;
+}
+
+export async function getAuditLogs(options: AuditLogFilters = {}): Promise<AuditLog[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("audit_logs")
-    .select("id, user_id, action, entity_type, entity_id, description, created_at")
-    .order("created_at", { ascending: false })
-    .limit(200);
+    .select(`
+      *,
+      profile:profiles!audit_logs_user_id_fkey(id, full_name, email, role)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (options.fromDate) {
+    query = query.gte("created_at", `${options.fromDate}T00:00:00.000Z`);
+  }
+  if (options.toDate) {
+    query = query.lte("created_at", `${options.toDate}T23:59:59.999Z`);
+  }
+  if (options.userId) {
+    query = query.eq("user_id", options.userId);
+  }
+  if (options.actorRole && options.actorRole !== "all") {
+    query = query.eq("actor_role", options.actorRole);
+  }
+  if (options.module && options.module !== "all") {
+    query = query.eq("module", options.module);
+  }
+  if (options.severity && options.severity !== "all") {
+    query = query.eq("severity", options.severity);
+  }
+  if (options.status && options.status !== "all") {
+    query = query.eq("status", options.status);
+  }
+  if (options.action && options.action !== "all") {
+    query = query.eq("action", options.action);
+  }
+  if (options.targetIdentifier) {
+    query = query.ilike("target_identifier", `%${options.targetIdentifier}%`);
+  }
+  if (options.search) {
+    query = query.or(`description.ilike.%${options.search}%,target_identifier.ilike.%${options.search}%,action.ilike.%${options.search}%`);
+  }
+
+  const limit = options.limit ?? 200;
+  query = query.limit(limit);
+
+  if (options.offset) {
+    query = query.range(options.offset, options.offset + limit - 1);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
+    // If foreign key join fails, fallback to simple select
+    const fallback = await supabase
+      .from("audit_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (fallback.data) {
+      return fallback.data as AuditLog[];
+    }
+
     if (options.throwOnError) {
       throw new Error("Unable to load audit logs.");
     }
@@ -725,17 +811,23 @@ export async function getITTickets(filters?: {
   return (data ?? []) as ITTicket[];
 }
 
-export async function getClasses(): Promise<SchoolClass[]> {
+export async function getClasses(academicYearId?: string): Promise<SchoolClass[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("classes")
     .select(`
       *,
       program:programs(id, name, code),
+      academic_year:academic_years(id, name, is_current),
       class_teacher:profiles!classes_class_teacher_id_fkey(id, full_name, email)
     `)
     .order("name", { ascending: true });
 
+  if (academicYearId) {
+    query = query.eq("academic_year_id", academicYearId);
+  }
+
+  const { data, error } = await query;
   if (error) {
     console.error("getClasses error:", error);
     return [];
@@ -763,7 +855,7 @@ export async function getAttendanceRecords(classId?: string, date?: string): Pro
     .from("attendance_records")
     .select(`
       *,
-      student:students(id, jhs_index_number, full_name, photo_path)
+      student:students(id, jhs_index_number, first_name, last_name, photo_path)
     `)
     .order("date", { ascending: false });
 
@@ -788,7 +880,7 @@ export async function getStudentResults(filters?: {
     .from("student_results")
     .select(`
       *,
-      student:students(id, jhs_index_number, full_name),
+      student:students(id, jhs_index_number, first_name, last_name),
       subject:subjects(id, name, code),
       class:classes(id, name)
     `)
@@ -818,4 +910,104 @@ export async function getStaffProfiles(): Promise<Profile[]> {
     return [];
   }
   return (data ?? []) as Profile[];
+}
+
+export async function getSemesters(academicYearId?: string): Promise<Semester[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("semesters")
+    .select("*, academic_year:academic_years(id, name, is_current)")
+    .order("semester_number", { ascending: true });
+
+  if (academicYearId) {
+    query = query.eq("academic_year_id", academicYearId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("getSemesters error:", error);
+    return [];
+  }
+  return (data ?? []) as Semester[];
+}
+
+export async function getStudentAcademicHistory(studentId: string): Promise<StudentAcademicEnrollment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("student_academic_enrollments")
+    .select(`
+      *,
+      academic_year:academic_years(id, name, is_current),
+      semester:semesters(id, name, semester_number),
+      class:classes(id, name, form_level)
+    `)
+    .eq("student_id", studentId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("getStudentAcademicHistory error:", error);
+    return [];
+  }
+  return (data ?? []) as StudentAcademicEnrollment[];
+}
+
+export async function getStaffSafetyCheck(staffId: string): Promise<StaffDeletionSafety> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("check_staff_deletion_safety", {
+    p_staff_id: staffId,
+  });
+
+  if (error || !data) {
+    console.error("getStaffSafetyCheck error:", error);
+    return {
+      safe: false,
+      total_references: 999,
+      reasons: ["Unable to verify account safety. Deactivate account instead."],
+      recommendation: "Deactivate account instead of permanent deletion.",
+    };
+  }
+
+  return data as StaffDeletionSafety;
+}
+
+export async function getITSecurityMetrics(): Promise<{
+  activeStaff: number;
+  inactiveStaff: number;
+  securityEventsCount: number;
+  warningEventsCount: number;
+  recentSecurityLogs: AuditLog[];
+}> {
+  const supabase = await createClient();
+
+  const staff = await getStaffProfiles();
+  const activeStaff = staff.filter((s) => s.is_active).length;
+  const inactiveStaff = staff.filter((s) => !s.is_active).length;
+
+  const { data: secLogs } = await supabase
+    .from("audit_logs")
+    .select(`
+      *,
+      profile:profiles!audit_logs_user_id_fkey(id, full_name, email, role)
+    `)
+    .in("severity", ["SECURITY", "CRITICAL"])
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const { count: secCount } = await supabase
+    .from("audit_logs")
+    .select("id", { count: "exact", head: true })
+    .in("severity", ["SECURITY", "CRITICAL"]);
+
+  const { count: warnCount } = await supabase
+    .from("audit_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("severity", "WARNING");
+
+  return {
+    activeStaff,
+    inactiveStaff,
+    securityEventsCount: secCount ?? 0,
+    warningEventsCount: warnCount ?? 0,
+    recentSecurityLogs: (secLogs ?? []) as AuditLog[],
+  };
 }

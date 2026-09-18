@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SCHOOL } from "@/config/branding";
 import { requireITOfficer } from "@/lib/dal";
-import { getITTickets, getRequests } from "@/lib/data";
+import { getITTickets, getRequests, getITSecurityMetrics } from "@/lib/data";
 import {
   LifeBuoy,
   Activity,
@@ -14,6 +14,9 @@ import {
   ArrowRight,
   PlusCircle,
   KeyRound,
+  ShieldCheck,
+  Users,
+  AlertTriangle,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +28,11 @@ export const metadata: Metadata = {
 
 export default async function ITDashboardPage() {
   const session = await requireITOfficer();
-  const tickets = await getITTickets();
-  const userRequests = await getRequests({ requesterId: session.id });
+  const [tickets, userRequests, secMetrics] = await Promise.all([
+    getITTickets(),
+    getRequests({ requesterId: session.id }),
+    getITSecurityMetrics(),
+  ]);
 
   const openTickets = tickets.filter((t) => t.status === "open" || t.status === "acknowledged");
   const inProgressTickets = tickets.filter((t) => t.status === "in_progress");
@@ -47,6 +53,9 @@ export default async function ITDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button render={<Link href="/it/audit" />} variant="outline" size="sm">
+            <ShieldAlert className="size-4 mr-1 text-primary" /> Security & Audit Center
+          </Button>
           <Button render={<Link href="/it/tickets" />} variant="outline" size="sm">
             <LifeBuoy className="size-4 mr-1 text-primary" /> View All Tickets
           </Button>
@@ -54,6 +63,61 @@ export default async function ITDashboardPage() {
             <PlusCircle className="size-4 mr-1" /> New IT Request
           </Button>
         </div>
+      </div>
+
+      {/* Operational & Security Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="shadow-xs border-border">
+          <CardContent className="pt-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] uppercase font-semibold text-muted-foreground tracking-wider">Active Staff</p>
+              <p className="text-2xl font-bold mt-0.5 text-foreground">{secMetrics.activeStaff}</p>
+              <p className="text-[10px] text-muted-foreground">Authorized faculty</p>
+            </div>
+            <div className="p-2 rounded-full bg-emerald-50 text-emerald-600">
+              <Users className="size-4" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xs border-border">
+          <CardContent className="pt-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] uppercase font-semibold text-muted-foreground tracking-wider">Disabled Staff</p>
+              <p className="text-2xl font-bold mt-0.5 text-muted-foreground">{secMetrics.inactiveStaff}</p>
+              <p className="text-[10px] text-muted-foreground">Deactivated accounts</p>
+            </div>
+            <div className="p-2 rounded-full bg-muted text-muted-foreground">
+              <Users className="size-4" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xs border-l-4 border-l-purple-500">
+          <CardContent className="pt-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] uppercase font-semibold text-purple-700 tracking-wider">Security Events</p>
+              <p className="text-2xl font-bold mt-0.5 text-purple-700">{secMetrics.securityEventsCount}</p>
+              <p className="text-[10px] text-muted-foreground">Role / Auth modifications</p>
+            </div>
+            <div className="p-2 rounded-full bg-purple-50 text-purple-600">
+              <ShieldAlert className="size-4" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xs border-l-4 border-l-amber-500">
+          <CardContent className="pt-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] uppercase font-semibold text-amber-700 tracking-wider">Warnings & Alerts</p>
+              <p className="text-2xl font-bold mt-0.5 text-amber-600">{secMetrics.warningEventsCount}</p>
+              <p className="text-[10px] text-muted-foreground">System warning logs</p>
+            </div>
+            <div className="p-2 rounded-full bg-amber-50 text-amber-600">
+              <AlertTriangle className="size-4" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Overview Stat Cards */}
@@ -256,17 +320,52 @@ export default async function ITDashboardPage() {
                 </Button>
               </div>
 
-              <div className="p-3 rounded-lg border border-border bg-card">
-                <p className="text-xs font-semibold text-foreground">System Audit Logs</p>
-                <p className="text-xs text-muted-foreground mt-0.5 mb-2.5">
-                  Inspect authentication, financial, and administrative operations.
+              <div className="p-3.5 rounded-lg border-2 border-primary/30 bg-primary/[0.03] space-y-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="size-4 text-primary" />
+                  <p className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    Security & Audit Center
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Searchable chronological audit trail with date ranges, severity filters, and before/after payloads.
                 </p>
-                <Button render={<Link href="/admin/audit-logs" />} variant="outline" size="sm" className="w-full text-xs">
-                  View Security Logs
+                <Button render={<Link href="/it/audit" />} size="sm" className="w-full text-xs font-semibold">
+                  <ShieldAlert className="size-3.5 mr-1.5" /> Open Security & Audit Center
                 </Button>
               </div>
             </CardContent>
           </Card>
+
+          {/* Recent Security Logs Stream */}
+          {secMetrics.recentSecurityLogs.length > 0 && (
+            <Card className="shadow-xs border-border">
+              <CardHeader className="pb-2.5 border-b border-border/50 flex flex-row items-center justify-between">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <ShieldAlert className="size-3.5 text-purple-600" /> Recent Security Events
+                </CardTitle>
+                <Link href="/it/audit" className="text-[11px] text-primary hover:underline">
+                  All Logs &rarr;
+                </Link>
+              </CardHeader>
+              <CardContent className="pt-3 divide-y divide-border/60 text-xs">
+                {secMetrics.recentSecurityLogs.slice(0, 4).map((log) => (
+                  <div key={log.id} className="py-2 first:pt-0 last:pb-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-semibold text-foreground truncate max-w-[170px]">{log.action}</span>
+                      <Badge className="text-[9px] px-1 py-0 bg-purple-100 text-purple-800 border-purple-200">
+                        {log.severity || "SECURITY"}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{log.description}</p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-1 font-mono">
+                      {new Date(log.created_at).toLocaleTimeString("en-GH", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

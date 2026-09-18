@@ -1,0 +1,41 @@
+import type { Metadata } from "next";
+import { SCHOOL } from "@/config/branding";
+import { requireAcademicOrAdmin } from "@/lib/dal";
+import { getClasses, getAcademicYears, getPrograms, getStaffProfiles } from "@/lib/data";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { ClassesManagementClient } from "./_components/ClassesManagementClient";
+
+export const metadata: Metadata = {
+  title: `Classes & Streams | ${SCHOOL.shortName}`,
+};
+
+export default async function AdminClassesPage() {
+  const session = await requireAcademicOrAdmin();
+  const [classes, academicYears, programs, allStaff] = await Promise.all([
+    getClasses(),
+    getAcademicYears(),
+    getPrograms(),
+    getStaffProfiles(),
+  ]);
+
+  const teachers = allStaff.filter(
+    (s) => (s.role === "teacher" || s.role === "academic_head" || s.role === "admin") && s.is_active
+  );
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Class Streams & Cohorts"
+        description={`Manage academic streams, form levels, and class teacher assignments for ${SCHOOL.shortName}.`}
+      />
+
+      <ClassesManagementClient
+        initialClasses={classes}
+        academicYears={academicYears}
+        programs={programs}
+        teachers={teachers}
+        canManage={session.role === "admin" || session.role === "academic_head"}
+      />
+    </div>
+  );
+}

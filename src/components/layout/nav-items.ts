@@ -8,7 +8,6 @@ import {
   CreditCard,
   Shield,
   BookOpen,
-  ClipboardList,
   Home,
   Search,
   FileText,
@@ -20,6 +19,9 @@ import {
   Layers,
   FileSpreadsheet,
   Settings,
+  Calendar,
+  ShieldAlert,
+  UploadCloud,
 } from "lucide-react";
 import type { UserRole } from "@/config/constants";
 
@@ -38,7 +40,11 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin"] },
         { label: "Students", href: "/students", icon: Users, roles: ["admin"], section: "Students" },
         { label: "Enroll Student", href: "/students/enroll", icon: UserPlus, roles: ["admin"], section: "Students" },
+        { label: "Import Students", href: "/students/import", icon: UploadCloud, roles: ["admin"], section: "Students" },
+        { label: "Cohort Promotion", href: "/students/promotion", icon: GraduationCap, roles: ["admin"], section: "Students" },
         { label: "Academic Years", href: "/admin/academic-years", icon: BookOpen, roles: ["admin"], section: "Academics" },
+        { label: "Semesters", href: "/admin/semesters", icon: Calendar, roles: ["admin"], section: "Academics" },
+        { label: "Classes & Streams", href: "/admin/classes", icon: BookOpen, roles: ["admin"], section: "Academics" },
         { label: "Programs", href: "/admin/programs", icon: Layers, roles: ["admin"], section: "Academics" },
         { label: "Houses", href: "/admin/houses", icon: Home, roles: ["admin"], section: "Academics" },
         { label: "Fee Types", href: "/admin/fee-types", icon: DollarSign, roles: ["admin"], section: "Finance" },
@@ -47,7 +53,7 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
         { label: "Reconciliation", href: "/finance/receipts", icon: Receipt, roles: ["admin"], section: "Finance" },
         { label: "All Requests", href: "/requests", icon: FileText, roles: ["admin"], section: "Operations" },
         { label: "Staff Access", href: "/admin/staff", icon: Shield, roles: ["admin"], section: "Administration" },
-        { label: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], section: "Administration" },
+        { label: "Security & Audit", href: "/it/audit", icon: ShieldAlert, roles: ["admin"], section: "Administration" },
         { label: "Settings", href: "/admin/settings", icon: Settings, roles: ["admin"], section: "Administration" },
       ];
 
@@ -57,7 +63,7 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
         { label: "User Support", href: "/it/tickets#reset", icon: Shield, roles: ["it_officer"], section: "Support" },
         { label: "IT Tickets", href: "/it/tickets", icon: LifeBuoy, roles: ["it_officer"], section: "Support" },
         { label: "System Health", href: "/it/dashboard#health", icon: Activity, roles: ["it_officer"], section: "Monitoring" },
-        { label: "Security Logs", href: "/admin/audit-logs", icon: ClipboardList, roles: ["it_officer"], section: "Monitoring" },
+        { label: "Security & Audit", href: "/it/audit", icon: ShieldAlert, roles: ["it_officer"], section: "Monitoring" },
         { label: "My Requests", href: "/requests", icon: FileText, roles: ["it_officer"], section: "Staff" },
       ];
 
@@ -65,17 +71,19 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
       return [
         { label: "Executive Dashboard", href: "/headmaster/dashboard", icon: LayoutDashboard, roles: ["headmaster"] },
         { label: "Students Directory", href: "/students", icon: Users, roles: ["headmaster"], section: "School" },
+        { label: "Cohort Promotion", href: "/students/promotion", icon: GraduationCap, roles: ["headmaster"], section: "School" },
         { label: "Academics Overview", href: "/academic/dashboard", icon: GraduationCap, roles: ["headmaster"], section: "School" },
         { label: "Finance Overview", href: "/finance", icon: DollarSign, roles: ["headmaster"], section: "Finance" },
         { label: "Operational Requests", href: "/requests", icon: FileText, roles: ["headmaster"], section: "Governance" },
-        { label: "Audit History", href: "/admin/audit-logs", icon: ClipboardList, roles: ["headmaster"], section: "Governance" },
+        { label: "Security & Audit", href: "/it/audit", icon: ShieldAlert, roles: ["headmaster"], section: "Governance" },
       ];
 
     case "academic_head":
       return [
         { label: "Academic Dashboard", href: "/academic/dashboard", icon: LayoutDashboard, roles: ["academic_head"] },
         { label: "Students", href: "/students", icon: Users, roles: ["academic_head"], section: "Academics" },
-        { label: "Classes & Subjects", href: "/academic/classes", icon: BookOpen, roles: ["academic_head"], section: "Academics" },
+        { label: "Cohort Promotion", href: "/students/promotion", icon: GraduationCap, roles: ["academic_head"], section: "Academics" },
+        { label: "Classes & Streams", href: "/admin/classes", icon: BookOpen, roles: ["academic_head"], section: "Academics" },
         { label: "Results Review", href: "/academic/results", icon: FileSpreadsheet, roles: ["academic_head"], section: "Assessments" },
         { label: "Academic Requests", href: "/requests", icon: FileText, roles: ["academic_head"], section: "Requests" },
       ];

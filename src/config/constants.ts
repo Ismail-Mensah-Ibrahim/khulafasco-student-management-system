@@ -212,3 +212,42 @@ export const GHANA_REGIONS = [
 ] as const;
 
 export type GhanaRegion = (typeof GHANA_REGIONS)[number];
+
+export const AUDIT_SEVERITIES = ["INFO", "WARNING", "SECURITY", "CRITICAL"] as const;
+export type AuditSeverity = (typeof AUDIT_SEVERITIES)[number];
+
+export const AUDIT_MODULES = [
+  "AUTH",
+  "STAFF",
+  "STUDENT",
+  "ACADEMIC",
+  "FINANCE",
+  "OPERATIONS",
+  "IT_SUPPORT",
+  "SYSTEM",
+] as const;
+export type AuditModule = (typeof AUDIT_MODULES)[number];
+
+export const PROMOTION_OUTCOMES = [
+  "PROMOTED",
+  "REPEATING",
+  "GRADUATED",
+  "WITHDRAWN",
+  "TRANSFERRED",
+  "DEFERRED",
+] as const;
+export type PromotionOutcome = (typeof PROMOTION_OUTCOMES)[number];
+
+export const PROMOTION_STATUSES = [
+  "promoted",
+  "repeating",
+  "graduated",
+  "withdrawn",
+  "transferred",
+  "deferred",
+  "pending",
+] as const;
+export type PromotionStatus = (typeof PROMOTION_STATUSES)[number];
+
+export const SEMESTER_NAMES = ["Semester 1", "Semester 2"] as const;
+export type SemesterName = (typeof SEMESTER_NAMES)[number];
