@@ -6,12 +6,11 @@ import {
   requireFinanceOrAdmin,
   requireHeadmaster,
   requireStaff,
-  requireAdmin,
 } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import { getHouseDistributionData, assignBalancedHouse } from "@/lib/services/house-allocation";
-import type { StudentTransfer, TransferDirection, TransferStatus } from "@/types";
 import { normalizeIndexNumber } from "@/lib/utils";
+import type { Gender } from "@/config/constants";
 
 export type TransferActionResult =
   | { success: true; message: string; transferId?: string; reference?: string }
@@ -22,6 +21,7 @@ function getText(formData: FormData, name: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function generateReference(supabase: any): Promise<string> {
   try {
     const { data, error } = await supabase.rpc("generate_transfer_reference");
@@ -232,7 +232,7 @@ export async function createTransferOutAction(formData: FormData): Promise<Trans
       destination_school: destinationSchool,
       transfer_date: new Date().toISOString().slice(0, 10),
       previous_form: enrollment?.level || "Form 1",
-      previous_class: (enrollment?.class as any)?.name || null,
+      previous_class: (enrollment?.class as { name?: string } | null)?.name || null,
       previous_academic_year: enrollment?.academic_year_id || student.academic_year_id,
       reason,
       documentation_notes: documentationNotes,
@@ -488,11 +488,12 @@ export async function finalizeTransferEnrollmentAction(formData: FormData): Prom
   if (!allocatedHouseId) {
     try {
       const distributions = await getHouseDistributionData(supabase);
-      const allocResult = assignBalancedHouse(transfer.gender as any, distributions);
+      const allocResult = assignBalancedHouse(transfer.gender as Gender, distributions);
       allocatedHouseId = allocResult.assignedHouseId;
       allocatedHouseName = allocResult.assignedHouseName;
-    } catch (allocErr: any) {
-      return { success: false, message: `House allocation error: ${allocErr.message}` };
+    } catch (allocErr: unknown) {
+      const msg = allocErr instanceof Error ? allocErr.message : String(allocErr);
+      return { success: false, message: `House allocation error: ${msg}` };
     }
   }
 

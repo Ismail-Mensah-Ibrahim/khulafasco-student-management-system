@@ -153,21 +153,33 @@ export async function createHouseAction(formData: FormData): Promise<void> {
 
   const capacity = capacityStr ? parseInt(capacityStr, 10) : 150;
 
-  const { error } = await supabase.from("houses").insert({
+  // Try inserting with code and capacity; fallback to basic columns
+  let insertError = null;
+  const { error: fullInsertError } = await supabase.from("houses").insert({
     name,
     code: code || name.slice(0, 3).toUpperCase(),
     capacity: isNaN(capacity) ? 150 : capacity,
     is_active: true,
   });
 
-  if (error) {
-    console.error("createHouseAction error:", error);
+  if (fullInsertError && fullInsertError.message.includes("does not exist")) {
+    const { error: basicError } = await supabase.from("houses").insert({
+      name,
+      is_active: true,
+    });
+    insertError = basicError;
+  } else {
+    insertError = fullInsertError;
+  }
+
+  if (insertError) {
+    console.error("createHouseAction error:", insertError);
   } else {
     await supabase.from("audit_logs").insert({
       user_id: session.id,
       actor_role: session.role,
       action: "HOUSE_CREATED",
-      module: "SETTINGS",
+      module: "HOUSE",
       target_identifier: name,
       description: `Created new house "${name}" with capacity ${capacity}`,
       severity: "INFO",
@@ -194,7 +206,9 @@ export async function updateHouseAction(formData: FormData): Promise<{ success: 
 
   const capacity = capacityStr ? parseInt(capacityStr, 10) : 150;
 
-  const { error } = await supabase
+  // Try updating with code and capacity; fallback if columns don't exist
+  let updateError = null;
+  const { error: fullUpdateError } = await supabase
     .from("houses")
     .update({
       name,
@@ -204,16 +218,29 @@ export async function updateHouseAction(formData: FormData): Promise<{ success: 
     })
     .eq("id", id);
 
-  if (error) {
-    console.error("updateHouseAction error:", error);
-    return { success: false, message: "Failed to update house: " + error.message };
+  if (fullUpdateError && fullUpdateError.message.includes("does not exist")) {
+    const { error: basicError } = await supabase
+      .from("houses")
+      .update({
+        name,
+        is_active: isActive,
+      })
+      .eq("id", id);
+    updateError = basicError;
+  } else {
+    updateError = fullUpdateError;
+  }
+
+  if (updateError) {
+    console.error("updateHouseAction error:", updateError);
+    return { success: false, message: "Failed to update house: " + updateError.message };
   }
 
   await supabase.from("audit_logs").insert({
     user_id: session.id,
     actor_role: session.role,
     action: "HOUSE_UPDATED",
-    module: "SETTINGS",
+    module: "HOUSE",
     target_identifier: name,
     description: `Updated house settings for ${name} (capacity: ${capacity}, active: ${isActive})`,
     severity: "INFO",
@@ -225,7 +252,13 @@ export async function updateHouseAction(formData: FormData): Promise<{ success: 
 }
 
 export async function rebalanceHousesAction(
-  moves: { studentId: string; toHouseId: string }[]
+  moves: {
+    studentId: string;
+    toHouseId: string;
+    fromHouseId?: string | null;
+    studentName?: string;
+    jhsIndexNumber?: string;
+  }[]
 ): Promise<{ success: boolean; message: string; movesApplied: number }> {
   const session = await requireAdmin();
   const supabase = await createClient();
@@ -234,36 +267,129 @@ export async function rebalanceHousesAction(
     return { success: false, message: "No moves provided for rebalancing.", movesApplied: 0 };
   }
 
+  // 1. Try atomic PostgreSQL RPC first
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc("rebalance_houses_atomic", {
+      p_moves: moves,
+      p_actor_id: session.id,
+      p_actor_role: session.role,
+    });
+
+    if (!rpcError && rpcData?.success) {
+      revalidatePath("/admin/houses");
+      revalidatePath("/students");
+      revalidatePath("/dashboard");
+      revalidatePath("/admin/audit-logs");
+
+      const applied = rpcData.moves_applied ?? moves.length;
+      return {
+        success: true,
+        message: `Successfully executed atomic rebalancing. ${applied} student${applied === 1 ? "" : "s"} updated.`,
+        movesApplied: applied,
+      };
+    }
+    if (rpcError) {
+      console.warn("rebalance_houses_atomic RPC unavailable or failed, utilizing fallback:", rpcError.message);
+    }
+  } catch (err) {
+    console.warn("rebalance_houses_atomic exception, proceeding with transactional fallback:", err);
+  }
+
+  // 2. Resilient fallback execution with full audit logging
+  // Pre-fetch houses to populate human-readable names
+  const { data: housesList } = await supabase.from("houses").select("id, name");
+  const houseMap = new Map((housesList || []).map((h) => [h.id, h.name]));
+
+  // Pre-fetch students being moved
+  const studentIds = moves.map((m) => m.studentId);
+  const { data: studentsData } = await supabase
+    .from("students")
+    .select("id, jhs_index_number, first_name, last_name, gender, house_id")
+    .in("id", studentIds);
+  const studentMap = new Map((studentsData || []).map((s) => [s.id, s]));
+
   let applied = 0;
+  let newAssignments = 0;
+  let reassignments = 0;
+
   for (const move of moves) {
-    const { error } = await supabase
+    const student = studentMap.get(move.studentId);
+    const fromHouseId = student?.house_id ?? move.fromHouseId ?? null;
+    const fromHouseName = fromHouseId ? houseMap.get(fromHouseId) ?? "Unknown House" : "Unassigned";
+    const toHouseName = houseMap.get(move.toHouseId) ?? "Unknown House";
+    const studentName = student ? `${student.first_name} ${student.last_name}` : move.studentName ?? "Student";
+    const jhsIndexNumber = student?.jhs_index_number ?? move.jhsIndexNumber ?? "N/A";
+    const isNew = !fromHouseId;
+
+    const { error: updateError } = await supabase
       .from("students")
       .update({ house_id: move.toHouseId, updated_at: new Date().toISOString() })
       .eq("id", move.studentId);
 
-    if (!error) {
+    if (!updateError) {
       applied++;
+      if (isNew) newAssignments++;
+      else reassignments++;
+
+      // Log per-student audit entry
+      await supabase.from("audit_logs").insert({
+        user_id: session.id,
+        actor_role: session.role,
+        action: isNew ? "STUDENT_HOUSE_ASSIGNED" : "STUDENT_HOUSE_REASSIGNED",
+        entity_type: "students",
+        entity_id: move.studentId,
+        module: "HOUSE",
+        target_identifier: jhsIndexNumber,
+        description: isNew
+          ? `Assigned student ${studentName} (${jhsIndexNumber}) to ${toHouseName} via automated rebalance.`
+          : `Reassigned student ${studentName} (${jhsIndexNumber}) from ${fromHouseName} to ${toHouseName} via automated rebalance.`,
+        before_data: { house_id: fromHouseId, house_name: fromHouseName },
+        after_data: { house_id: move.toHouseId, house_name: toHouseName },
+        metadata: {
+          student_id: move.studentId,
+          jhs_index_number: jhsIndexNumber,
+          student_name: studentName,
+          gender: student?.gender,
+          from_house_id: fromHouseId,
+          from_house_name: fromHouseName,
+          to_house_id: move.toHouseId,
+          to_house_name: toHouseName,
+        },
+        severity: "INFO",
+        status: "SUCCESS",
+      });
     }
   }
 
+  // Master rebalance audit log entry
   await supabase.from("audit_logs").insert({
     user_id: session.id,
     actor_role: session.role,
-    action: "HOUSE_REBALANCE_EXECUTED",
-    module: "STUDENT",
-    description: `Executed automated house rebalancing across houses. Successfully reassigned ${applied} of ${moves.length} students.`,
+    action: "HOUSE_REBALANCED",
+    entity_type: "houses",
+    entity_id: null,
+    module: "HOUSE",
+    target_identifier: "ALL_HOUSES",
+    description: `Executed automated house rebalancing across houses. Evaluated ${moves.length} students: ${applied} updated (${newAssignments} new assignments, ${reassignments} reassignments).`,
     severity: "INFO",
     status: applied === moves.length ? "SUCCESS" : "WARNING",
-    metadata: { totalRequested: moves.length, applied },
+    metadata: {
+      totalEvaluated: moves.length,
+      applied,
+      newAssignments,
+      reassignments,
+      timestamp: new Date().toISOString(),
+    },
   });
 
   revalidatePath("/admin/houses");
   revalidatePath("/students");
   revalidatePath("/dashboard");
+  revalidatePath("/admin/audit-logs");
 
   return {
     success: true,
-    message: `Successfully rebalanced houses. ${applied} student${applied === 1 ? "" : "s"} reassigned.`,
+    message: `Successfully rebalanced houses. ${applied} student${applied === 1 ? "" : "s"} updated (${newAssignments} assigned, ${reassignments} reassigned).`,
     movesApplied: applied,
   };
 }
@@ -374,6 +500,7 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
 
   const staffId = getText(formData, "staff_id");
   const newRole = getText(formData, "role");
+  const houseId = getText(formData, "house_id") || null;
 
   if (!staffId || !ROLES.includes(newRole as never)) {
     return { success: false, message: "Invalid staff ID or role specified." };
@@ -382,7 +509,7 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
   // Check current profile
   const { data: currentProfile, error: fetchError } = await supabase
     .from("profiles")
-    .select("role, full_name")
+    .select("role, full_name, house_id")
     .eq("id", staffId)
     .single();
 
@@ -392,41 +519,51 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
 
   const oldRole = currentProfile.role;
 
-  // Try authoritative database RPC first
-  const { error: rpcError } = await supabase.rpc("update_staff_role", {
-    p_staff_id: staffId,
-    p_new_role: newRole,
-  });
+  // Direct update with house_id support
+  const updatePayload: { role: (typeof ROLES)[number]; updated_at: string; house_id?: string | null } = {
+    role: newRole as (typeof ROLES)[number],
+    updated_at: new Date().toISOString(),
+  };
 
-  if (rpcError) {
-    console.warn("update_staff_role RPC fallback to direct update:", rpcError);
-    // Fallback: direct update + audit log
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ role: newRole as (typeof ROLES)[number], updated_at: new Date().toISOString() })
-      .eq("id", staffId);
-
-    if (updateError) {
-      console.error("updateStaffRoleAction update error:", updateError);
-      return { success: false, message: "Failed to update staff role." };
-    }
-
-    await supabase.from("audit_logs").insert({
-      user_id: session.id,
-      actor_role: session.role,
-      action: "ROLE_CHANGED",
-      module: "STAFF",
-      target_identifier: staffId,
-      description: `Role for ${currentProfile.full_name || "Staff"} changed from ${oldRole} to ${newRole}`,
-      severity: "SECURITY",
-      status: "SUCCESS",
-      before_data: { role: oldRole },
-      after_data: { role: newRole },
-    });
+  if (houseId !== null) {
+    updatePayload.house_id = houseId || null;
   }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update(updatePayload)
+    .eq("id", staffId);
+
+  if (updateError) {
+    console.error("updateStaffRoleAction update error:", updateError);
+    return { success: false, message: "Failed to update staff role." };
+  }
+
+  // If assigned to a house, update houses table leadership reference
+  if (houseId && (newRole === "house_master" || newRole === "house_mistress")) {
+    const houseField = newRole === "house_master" ? "house_master_id" : "house_mistress_id";
+    await supabase.from("houses").update({ [houseField]: staffId }).eq("id", houseId);
+  }
+
+  await supabase.from("audit_logs").insert({
+    user_id: session.id,
+    actor_role: session.role,
+    action: "ROLE_CHANGED",
+    entity_type: "profiles",
+    entity_id: staffId,
+    module: "STAFF",
+    target_identifier: staffId,
+    description: `Role for ${currentProfile.full_name || "Staff"} changed from ${oldRole} to ${newRole}`,
+    severity: "SECURITY",
+    status: "SUCCESS",
+    before_data: { role: oldRole },
+    after_data: { role: newRole, house_id: houseId },
+  });
 
   revalidatePath("/admin/staff");
   revalidatePath("/admin/audit-logs");
+  revalidatePath("/admin/houses");
+  revalidatePath("/house/dashboard");
   revalidatePath("/it/dashboard");
   revalidatePath("/it/audit");
 

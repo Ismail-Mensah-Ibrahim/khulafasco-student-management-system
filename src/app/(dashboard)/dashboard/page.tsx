@@ -162,6 +162,9 @@ export default async function DashboardPage() {
         redirect("/academic/dashboard");
       case "teacher":
         redirect("/teacher/dashboard");
+      case "house_master":
+      case "house_mistress":
+        redirect("/house/dashboard");
       case "domestic_officer":
         redirect("/operations/dashboard");
       case "general_staff":

@@ -50,3 +50,9 @@ next-env.d.ts
 
 # VS Code editor metadata
 .vscode/
+
+# Supabase temp
+supabase/.temp/
+
+# Verification & scratch scripts
+/scripts/

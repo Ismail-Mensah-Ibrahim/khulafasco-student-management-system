@@ -27,8 +27,9 @@ import type {
   StudentResult,
   Profile,
   StudentTransfer,
+  HouseExeatRecord,
 } from "@/types";
-import type { Gender } from "@/config/constants";
+import type { Gender, UserRole } from "@/config/constants";
 import { getHouseDistributionData, type HouseDistributionItem } from "@/lib/services/house-allocation";
 
 export interface DashboardProgramStat {
@@ -1025,30 +1026,52 @@ export async function getHouseDistributions(): Promise<HouseDistributionItem[]> 
   }
 }
 
-export async function getHouseStudentsForRebalance(): Promise<{
+export interface HouseStudentRosterItem {
   id: string;
+  jhsIndexNumber: string;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
+  photoPath?: string | null;
   gender: Gender;
-  houseId: string;
-}[]> {
+  houseId: string | null;
+  houseName: string;
+  programName?: string;
+  enrollmentStatus: string;
+}
+
+export async function getHouseStudentsForRebalance(): Promise<HouseStudentRosterItem[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("students")
-    .select("id, first_name, last_name, gender, house_id")
+    .select("id, jhs_index_number, first_name, last_name, gender, house_id, photo_path, enrollment_status, house:houses(id, name), program:programs(name)")
     .eq("enrollment_status", "active")
-    .not("house_id", "is", null);
+    .order("last_name", { ascending: true });
 
   if (error || !data) {
     console.error("getHouseStudentsForRebalance error:", error);
     return [];
   }
 
-  return data.map((s) => ({
-    id: s.id,
-    fullName: `${s.first_name} ${s.last_name}`,
-    gender: s.gender as Gender,
-    houseId: s.house_id as string,
-  }));
+  return data.map((s) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const house = s.house as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const program = s.program as any;
+    return {
+      id: s.id,
+      jhsIndexNumber: s.jhs_index_number || "---",
+      fullName: `${s.first_name} ${s.last_name}`,
+      firstName: s.first_name,
+      lastName: s.last_name,
+      photoPath: s.photo_path,
+      gender: s.gender as Gender,
+      houseId: s.house_id as string | null,
+      houseName: house?.name || "Unassigned",
+      programName: program?.name || "General",
+      enrollmentStatus: s.enrollment_status,
+    };
+  });
 }
 
 export interface TransferFilters {
@@ -1209,7 +1232,17 @@ export async function getActiveStudentsForTransfer(): Promise<ActiveTransferStud
     paymentMap.set(p.student_id, (paymentMap.get(p.student_id) || 0) + Number(p.amount || 0));
   });
 
-  return students.map((s: any) => {
+  interface StudentBalanceRow {
+    id: string;
+    jhs_index_number: string;
+    first_name: string;
+    last_name: string;
+    gender: Gender;
+    program?: { name: string } | null;
+    house?: { name: string } | null;
+  }
+
+  return (students as unknown as StudentBalanceRow[]).map((s) => {
     const due = chargeMap.get(s.id) || 0;
     const paid = paymentMap.get(s.id) || 0;
     const bal = Math.max(0, due - paid);
@@ -1246,6 +1279,30 @@ export interface WaecStpCandidate {
   hasQualitativeRemarks: boolean;
   isStpReady: boolean;
   missingRequirements: string[];
+}
+
+interface StudentResultRow {
+  id: string;
+  assessment_score: number | null;
+  exam_score: number | null;
+  total_score: number | null;
+  grade: string | null;
+  remarks: string | null;
+  conduct: string | null;
+  punctuality: string | null;
+  teacher_comment: string | null;
+}
+
+interface WaecStudentRow {
+  id: string;
+  jhs_index_number: string;
+  first_name: string;
+  last_name: string;
+  gender: string;
+  date_of_birth: string | null;
+  program?: { name: string; code: string } | null;
+  house?: { name: string } | null;
+  results?: StudentResultRow[] | null;
 }
 
 export async function getWaecStpCandidates(): Promise<WaecStpCandidate[]> {
@@ -1285,7 +1342,7 @@ export async function getWaecStpCandidates(): Promise<WaecStpCandidate[]> {
 
   const validWaecGrades = new Set(["A1", "B2", "B3", "C4", "C5", "C6", "D7", "E8", "F9", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
 
-  return students.map((s: any) => {
+  return (students as unknown as WaecStudentRow[]).map((s) => {
     const missing: string[] = [];
 
     // 1. 10-digit index
@@ -1305,16 +1362,16 @@ export async function getWaecStpCandidates(): Promise<WaecStpCandidate[]> {
     // 4. Assessment Scores (30% continuous + 70% exam)
     const results = s.results || [];
     const hasResults = results.length > 0;
-    const hasContinuousAssessment = hasResults && results.every((r: any) => r.assessment_score != null && r.exam_score != null);
+    const hasContinuousAssessment = hasResults && results.every((r) => r.assessment_score != null && r.exam_score != null);
     if (!hasResults) missing.push("No Terminal Results / Continuous Assessments Recorded");
     else if (!hasContinuousAssessment) missing.push("Incomplete 30% Class / 70% Exam Score Breakdown");
 
     // 5. Letter Grades
-    const hasValidLetterGrades = hasResults && results.every((r: any) => r.grade && validWaecGrades.has(r.grade));
+    const hasValidLetterGrades = hasResults && results.every((r) => r.grade && validWaecGrades.has(r.grade));
     if (hasResults && !hasValidLetterGrades) missing.push("Non-Standard WAEC Grading");
 
     // 6. Qualitative Remarks
-    const hasQualitativeRemarks = results.some((r: any) => r.remarks || r.teacher_comment || r.conduct);
+    const hasQualitativeRemarks = results.some((r) => r.remarks || r.teacher_comment || r.conduct);
     if (hasResults && !hasQualitativeRemarks) missing.push("Missing Teacher Remarks / Conduct");
 
     const isStpReady = hasValidIndex && hasFullBiodata && hasProgram && hasResults && hasContinuousAssessment;
@@ -1342,5 +1399,170 @@ export async function getWaecStpCandidates(): Promise<WaecStpCandidate[]> {
     };
   });
 }
+
+export interface HouseDashboardData {
+  house: House | null;
+  isAssigned: boolean;
+  totalStudents: number;
+  maleCount: number;
+  femaleCount: number;
+  boardingCount: number;
+  dayCount: number;
+  capacity: number;
+  occupancyPercent: number;
+  houseMaster: Profile | null;
+  houseMistress: Profile | null;
+  students: (HouseStudentRosterItem & { studentType?: string; parentName?: string; parentPhone?: string })[];
+  activeExeatsCount: number;
+  recentExeats: HouseExeatRecord[];
+}
+
+export async function getHouseDashboardData(
+  userId: string,
+  userRole: UserRole,
+  overrideHouseId?: string
+): Promise<HouseDashboardData> {
+  const supabase = await createClient();
+
+  let targetHouseId: string | null = overrideHouseId || null;
+
+  if (!targetHouseId) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("house_id")
+      .eq("id", userId)
+      .single();
+
+    targetHouseId = (profile as { house_id?: string | null })?.house_id || null;
+  }
+
+  // If Admin with no specific house assigned, pick the first active house
+  if (!targetHouseId && userRole === "admin") {
+    const { data: firstHouse } = await supabase
+      .from("houses")
+      .select("id")
+      .order("name", { ascending: true })
+      .limit(1)
+      .single();
+
+    targetHouseId = firstHouse?.id || null;
+  }
+
+  if (!targetHouseId) {
+    return {
+      house: null,
+      isAssigned: false,
+      totalStudents: 0,
+      maleCount: 0,
+      femaleCount: 0,
+      boardingCount: 0,
+      dayCount: 0,
+      capacity: 150,
+      occupancyPercent: 0,
+      houseMaster: null,
+      houseMistress: null,
+      students: [],
+      activeExeatsCount: 0,
+      recentExeats: [],
+    };
+  }
+
+  // Fetch house details
+  const { data: houseData } = await supabase
+    .from("houses")
+    .select("*")
+    .eq("id", targetHouseId)
+    .single();
+
+  // Fetch house leadership profiles
+  const { data: leaders } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("house_id", targetHouseId)
+    .in("role", ["house_master", "house_mistress"]);
+
+  const houseMaster = leaders?.find((l) => l.role === "house_master") || null;
+  const houseMistress = leaders?.find((l) => l.role === "house_mistress") || null;
+
+  // Fetch active students in this house
+  const { data: studentRows } = await supabase
+    .from("students")
+    .select("id, jhs_index_number, first_name, middle_name, last_name, gender, student_type, enrollment_status, photo_path, parent_name, parent_phone, program:programs(name)")
+    .eq("house_id", targetHouseId)
+    .eq("enrollment_status", "active")
+    .order("last_name", { ascending: true });
+
+  const students = (studentRows || []).map((s) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const program = s.program as any;
+    return {
+      id: s.id,
+      jhsIndexNumber: s.jhs_index_number,
+      fullName: `${s.first_name} ${s.last_name}`,
+      firstName: s.first_name,
+      lastName: s.last_name,
+      photoPath: s.photo_path,
+      gender: s.gender as Gender,
+      houseId: targetHouseId,
+      houseName: houseData?.name || "Assigned House",
+      programName: program?.name || "General",
+      enrollmentStatus: s.enrollment_status,
+      studentType: s.student_type,
+      parentName: s.parent_name,
+      parentPhone: s.parent_phone,
+    };
+  });
+
+  const maleCount = students.filter((s) => s.gender === "male").length;
+  const femaleCount = students.filter((s) => s.gender === "female").length;
+  const boardingCount = students.filter((s) => s.studentType === "boarding").length;
+  const dayCount = students.filter((s) => s.studentType === "day").length;
+  const capacity = houseData?.capacity ?? 150;
+  const total = students.length;
+  const occupancyPercent = capacity > 0 ? Math.round((total / capacity) * 100) : 0;
+
+  // Fetch exeats for this house
+  const { data: exeats } = await supabase
+    .from("house_exeats")
+    .select("*, student:students(id, jhs_index_number, first_name, last_name, gender, photo_path), issuer:profiles!house_exeats_issued_by_fkey(full_name)")
+    .eq("house_id", targetHouseId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  const activeExeatsCount = (exeats || []).filter((e) => e.status === "active").length;
+
+  return {
+    house: houseData as House | null,
+    isAssigned: true,
+    totalStudents: total,
+    maleCount,
+    femaleCount,
+    boardingCount,
+    dayCount,
+    capacity,
+    occupancyPercent,
+    houseMaster: houseMaster as Profile | null,
+    houseMistress: houseMistress as Profile | null,
+    students,
+    activeExeatsCount,
+    recentExeats: (exeats || []) as unknown as HouseExeatRecord[],
+  };
+}
+
+export async function getHouseExeats(houseId: string): Promise<HouseExeatRecord[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("house_exeats")
+    .select("*, student:students(id, jhs_index_number, first_name, last_name, gender, photo_path), issuer:profiles!house_exeats_issued_by_fkey(full_name)")
+    .eq("house_id", houseId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("getHouseExeats error:", error);
+    return [];
+  }
+  return (data || []) as unknown as HouseExeatRecord[];
+}
+
 
 

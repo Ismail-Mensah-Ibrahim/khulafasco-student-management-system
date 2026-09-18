@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
-  Plus,
   Search,
   FileCheck,
 } from "lucide-react";

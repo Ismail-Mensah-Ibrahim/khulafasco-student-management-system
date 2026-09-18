@@ -9,6 +9,7 @@ import { GENDER_LABELS } from "@/config/constants";
 import { requireRole } from "@/lib/dal";
 import { getAcademicYears, getStudentsPage, getPrograms, getHouses } from "@/lib/data";
 import { getFullName } from "@/lib/utils";
+import { StudentAvatar } from "@/components/shared/StudentAvatar";
 
 export const metadata: Metadata = {
   title: `Students | ${SCHOOL.shortName}`,
@@ -287,16 +288,13 @@ export default async function StudentsPage({
                   header: "Student",
                   cell: (student) => (
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        style={{
-                          background: "var(--brand-accent)",
-                          color: "var(--brand-primary)",
-                        }}
-                      >
-                        {student.first_name[0]}
-                        {student.last_name[0]}
-                      </div>
+                      <StudentAvatar
+                        jhsIndexNumber={student.jhs_index_number}
+                        firstName={student.first_name}
+                        lastName={student.last_name}
+                        photoPath={student.photo_path}
+                        size="md"
+                      />
                       <div className="space-y-0.5">
                         <div className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>
                           {getFullName(student.first_name, student.middle_name, student.last_name)}

@@ -28,6 +28,7 @@ const PROTECTED_PREFIXES = [
   "/academic",
   "/teacher",
   "/operations",
+  "/house",
   "/staff",
   "/requests",
   "/unauthorized",

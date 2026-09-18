@@ -54,6 +54,10 @@ export interface House {
   code?: string | null;
   capacity?: number | null;
   is_active?: boolean;
+  house_master_id?: string | null;
+  house_mistress_id?: string | null;
+  house_master?: Profile | null;
+  house_mistress?: Profile | null;
   created_at: string;
 }
 
@@ -63,8 +67,31 @@ export interface Profile {
   role: UserRole;
   is_active: boolean;
   phone: string | null;
+  house_id?: string | null;
+  house?: House | null;
   created_at: string;
   updated_at: string;
+}
+
+export type ExeatStatus = "active" | "returned" | "overdue" | "cancelled";
+
+export interface HouseExeatRecord {
+  id: string;
+  student_id: string;
+  house_id: string;
+  issued_by: string | null;
+  reason: string;
+  departure_date: string;
+  expected_return_date: string;
+  actual_return_date: string | null;
+  status: ExeatStatus;
+  parent_contacted: boolean;
+  remarks: string | null;
+  created_at: string;
+  updated_at: string;
+  student?: Student;
+  house?: House;
+  issuer?: Profile;
 }
 
 export interface Student {
