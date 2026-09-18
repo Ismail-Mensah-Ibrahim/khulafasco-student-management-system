@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Your Email - Khulafasco SMS</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #FAFAF8;
+      color: #1A202C;
+      line-height: 1.6;
+    }
+    .wrapper {
+      width: 100%;
+      table-layout: fixed;
+      background-color: #FAFAF8;
+      padding-top: 30px;
+      padding-bottom: 40px;
+    }
+    .main {
+      background-color: #FFFFFF;
+      margin: 0 auto;
+      max-width: 600px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      border: 1px solid #EAE6DE;
+    }
+    .header {
+      background: linear-gradient(135deg, #3D0D17 0%, #6B1A2A 100%);
+      padding: 32px 24px;
+      text-align: center;
+      border-bottom: 3px solid #C4956A;
+    }
+    .logo {
+      width: 72px;
+      height: 72px;
+      margin-bottom: 12px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      padding: 4px;
+      border: 2px solid #C4956A;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .school-name {
+      color: #FFFFFF;
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      margin: 0;
+      text-transform: uppercase;
+      font-family: "Georgia", serif;
+    }
+    .school-motto {
+      color: #E8C9A0;
+      font-size: 12px;
+      font-style: italic;
+      margin-top: 6px;
+      letter-spacing: 0.5px;
+    }
+    .content {
+      padding: 36px 32px;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      color: #3D0D17;
+      margin-bottom: 16px;
+    }
+    .paragraph {
+      font-size: 15px;
+      color: #4A5568;
+      margin-bottom: 20px;
+    }
+    .cta-container {
+      text-align: center;
+      margin: 32px 0;
+    }
+    .cta-btn {
+      background-color: #6B1A2A;
+      color: #FFFFFF !important;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      display: inline-block;
+      box-shadow: 0 4px 12px rgba(107, 26, 42, 0.25);
+      border: 1px solid #C4956A;
+    }
+    .code-box {
+      background-color: #FDF9F3;
+      border: 1px dashed #C4956A;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .code-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #8B2535;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .code-val {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 20px;
+      font-weight: bold;
+      color: #3D0D17;
+      letter-spacing: 3px;
+    }
+    .fallback-link {
+      font-size: 12px;
+      color: #718096;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+    .fallback-link a {
+      color: #6B1A2A;
+      text-decoration: underline;
+    }
+    .divider {
+      height: 1px;
+      background-color: #EDF2F7;
+      margin: 28px 0;
+    }
+    .footer {
+      background-color: #FAFAF8;
+      padding: 24px;
+      text-align: center;
+      border-top: 1px solid #EAE6DE;
+      font-size: 12px;
+      color: #718096;
+    }
+    .footer p {
+      margin: 4px 0;
+    }
+    .badge {
+      display: inline-block;
+      background-color: #E8C9A0;
+      color: #3D0D17;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <table class="main" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td class="header">
+          <img src="https://khulafasco-sms-disci-net.vercel.app/school-logo.png" alt="Khulafasco Crest" class="logo" />
+          <h1 class="school-name">Alkhulafau Arrashiduun Islamic SHS</h1>
+          <div class="school-motto">"We Will Never Forget The Ladder"</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="content">
+          <div class="badge">Official Staff Portal</div>
+          <div class="greeting">Assalamu Alaikum / Welcome,</div>
+          <p class="paragraph">
+            You are receiving this notification because an account was registered or requested for you on the <strong>Khulafasco Student Management System (SMS)</strong>.
+          </p>
+          <p class="paragraph">
+            To activate your authorized account and proceed to the portal login, please verify your email address by clicking the button below:
+          </p>
+          
+          <div class="cta-container">
+            <a href="{{ .ConfirmationURL }}" class="cta-btn" target="_blank">
+              Confirm Email & Activate Portal
+            </a>
+          </div>
+
+          <div class="code-box">
+            <div class="code-title">Verification Token</div>
+            <div class="code-val">{{ .Token }}</div>
+          </div>
+
+          <p class="paragraph" style="font-size: 13px; color: #718096;">
+            Once confirmed, you will be redirected to the Staff Sign In screen to access your personalized operational dashboard.
+          </p>
+
+          <div class="divider"></div>
+
+          <div class="fallback-link">
+            If the button above does not work, copy and paste this URL into your browser:<br />
+            <a href="{{ .ConfirmationURL }}" target="_blank">{{ .ConfirmationURL }}</a>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="footer">
+          <p><strong>Alkhulafau Arrashiduun Islamic Senior High School</strong></p>
+          <p>P.O. Box, Ghana • Student Management System Portal</p>
+          <p style="margin-top: 10px; font-size: 11px; color: #A0AEC0;">
+            This is an automated system message. If you did not register for this portal or believe this was received in error, please contact the IT Administrator immediately.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

@@ -10,6 +10,7 @@ import {
   Eye,
   X,
   FileCode,
+  Download,
 } from "lucide-react";
 import {
   AUDIT_MODULES,
@@ -107,6 +108,44 @@ export function SecurityAuditCenterClient({
     setSelectedStatus("all");
     setSelectedRole("all");
     setSelectedUserId("all");
+  }
+
+  function handleExportCsv() {
+    if (filteredLogs.length === 0) return;
+    const headers = [
+      "Timestamp",
+      "Actor Name",
+      "Actor Email",
+      "Role",
+      "Module",
+      "Action",
+      "Target Identifier",
+      "Severity",
+      "Status",
+      "Description",
+    ];
+    const rows = filteredLogs.map((log) => [
+      `"${new Date(log.created_at).toISOString()}"`,
+      `"${(log.profile?.full_name || "System / User").replace(/"/g, '""')}"`,
+      `"${(log.profile?.email || "").replace(/"/g, '""')}"`,
+      `"${(log.actor_role || log.profile?.role || "staff").replace(/"/g, '""')}"`,
+      `"${(log.module || "SYSTEM").replace(/"/g, '""')}"`,
+      `"${log.action.replace(/"/g, '""')}"`,
+      `"${(log.target_identifier || log.entity_id || "").replace(/"/g, '""')}"`,
+      `"${log.severity || "INFO"}"`,
+      `"${log.status || "SUCCESS"}"`,
+      `"${(log.description || "").replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `khulafasco_audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   function getSeverityBadge(severity?: string | null) {
@@ -307,6 +346,15 @@ export function SecurityAuditCenterClient({
               Chronological Audit Trail ({filteredLogs.length} Records)
             </CardTitle>
           </div>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={handleExportCsv}
+            disabled={filteredLogs.length === 0}
+            className="text-xs"
+          >
+            <Download className="size-3.5 mr-1" /> Export CSV
+          </Button>
         </CardHeader>
 
         <CardContent className="p-0">
@@ -345,7 +393,12 @@ export function SecurityAuditCenterClient({
                             timeStyle: "medium",
                           })}
                         </td>
-                        <td className="px-4 py-3 font-semibold text-foreground">{actorName}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-foreground">{actorName}</div>
+                          {log.profile?.email && (
+                            <div className="text-[10px] text-muted-foreground font-mono">{log.profile.email}</div>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <Badge variant="outline" className="text-[10px] capitalize">
                             {actorRole.replace("_", " ")}

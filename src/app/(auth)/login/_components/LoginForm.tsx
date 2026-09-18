@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { loginAction, type LoginState } from "@/lib/actions/auth";
-import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
-import { useState } from "react";
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
 /**
  * Production login form.
@@ -11,6 +11,10 @@ import { useState } from "react";
  * All credential handling happens server-side.
  */
 export function LoginForm() {
+  const searchParams = useSearchParams();
+  const isVerified = searchParams.get("verified") === "true";
+  const urlError = searchParams.get("error");
+
   const [state, action, pending] = useActionState<LoginState, FormData>(
     loginAction,
     undefined
@@ -30,6 +34,42 @@ export function LoginForm() {
 
   return (
     <form action={action} className="space-y-5" noValidate>
+      {/* Email Verification Success Banner */}
+      {isVerified && (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-lg px-4 py-3 text-xs bg-emerald-50 border border-emerald-300 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-700 dark:text-emerald-200"
+        >
+          <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+          <div>
+            <p className="font-semibold text-sm text-emerald-900 dark:text-emerald-100">
+              Email Confirmed Successfully!
+            </p>
+            <p className="mt-0.5">
+              Your Khulafasco staff account is confirmed and active. Enter your password below to sign in.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* URL Verification Error Banner */}
+      {urlError === "verification_failed" && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-lg px-4 py-3 text-xs bg-amber-50 border border-amber-300 text-amber-900 dark:bg-amber-950 dark:border-amber-700 dark:text-amber-200"
+        >
+          <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+          <div>
+            <p className="font-semibold text-sm text-amber-950 dark:text-amber-100">
+              Verification Link Expired or Invalid
+            </p>
+            <p className="mt-0.5">
+              The confirmation link is invalid or has already been used. If your account was previously verified, you can sign in directly below.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* General error banner */}
       {generalError && (
         <div

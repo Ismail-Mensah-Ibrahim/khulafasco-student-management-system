@@ -389,21 +389,74 @@ export async function getAuditLogs(options: AuditLogFilters = {}): Promise<Audit
   const { data, error } = await query;
 
   if (error) {
-    // If foreign key join fails, fallback to simple select
-    const fallback = await supabase
+    console.warn("getAuditLogs join warning, falling back to manual batch profile resolution:", error.message);
+    let fallbackQuery = supabase
       .from("audit_logs")
       .select("*")
-      .order("created_at", { ascending: false })
-      .limit(limit);
+      .order("created_at", { ascending: false });
 
-    if (fallback.data) {
-      return fallback.data as AuditLog[];
+    if (options.fromDate) {
+      fallbackQuery = fallbackQuery.gte("created_at", `${options.fromDate}T00:00:00.000Z`);
+    }
+    if (options.toDate) {
+      fallbackQuery = fallbackQuery.lte("created_at", `${options.toDate}T23:59:59.999Z`);
+    }
+    if (options.userId) {
+      fallbackQuery = fallbackQuery.eq("user_id", options.userId);
+    }
+    if (options.actorRole && options.actorRole !== "all") {
+      fallbackQuery = fallbackQuery.eq("actor_role", options.actorRole);
+    }
+    if (options.module && options.module !== "all") {
+      fallbackQuery = fallbackQuery.eq("module", options.module);
+    }
+    if (options.severity && options.severity !== "all") {
+      fallbackQuery = fallbackQuery.eq("severity", options.severity);
+    }
+    if (options.status && options.status !== "all") {
+      fallbackQuery = fallbackQuery.eq("status", options.status);
+    }
+    if (options.action && options.action !== "all") {
+      fallbackQuery = fallbackQuery.eq("action", options.action);
+    }
+    if (options.targetIdentifier) {
+      fallbackQuery = fallbackQuery.ilike("target_identifier", `%${options.targetIdentifier}%`);
+    }
+    if (options.search) {
+      fallbackQuery = fallbackQuery.or(`description.ilike.%${options.search}%,target_identifier.ilike.%${options.search}%,action.ilike.%${options.search}%`);
+    }
+
+    fallbackQuery = fallbackQuery.limit(limit);
+
+    if (options.offset) {
+      fallbackQuery = fallbackQuery.range(options.offset, options.offset + limit - 1);
+    }
+
+    const fallback = await fallbackQuery;
+
+    if (fallback.data && fallback.data.length > 0) {
+      const userIds = Array.from(
+        new Set(fallback.data.map((l: { user_id?: string | null }) => l.user_id).filter((id): id is string => Boolean(id)))
+      );
+      let profileMap = new Map<string, Profile>();
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, role, phone, is_active, created_at, updated_at")
+          .in("id", userIds);
+        if (profiles) {
+          profileMap = new Map(profiles.map((p) => [p.id, p as Profile]));
+        }
+      }
+      return (fallback.data as AuditLog[]).map((log) => ({
+        ...log,
+        profile: log.user_id ? profileMap.get(log.user_id) : undefined,
+      }));
     }
 
     if (options.throwOnError) {
       throw new Error("Unable to load audit logs.");
     }
-    console.error("getAuditLogs error:", error);
     return [] as AuditLog[];
   }
 
