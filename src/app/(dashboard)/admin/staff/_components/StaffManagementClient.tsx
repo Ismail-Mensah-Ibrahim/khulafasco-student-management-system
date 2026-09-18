@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Shield,
   ShieldCheck,
@@ -49,6 +50,15 @@ export function StaffManagementClient({
   initialStaffList,
   currentUserId,
 }: StaffManagementClientProps) {
+  const router = useRouter();
+  const [staffList, setStaffList] = useState<Profile[]>(initialStaffList);
+  const [prevInitialStaffList, setPrevInitialStaffList] = useState<Profile[]>(initialStaffList);
+
+  if (initialStaffList !== prevInitialStaffList) {
+    setPrevInitialStaffList(initialStaffList);
+    setStaffList(initialStaffList);
+  }
+
   const [search, setSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -70,7 +80,7 @@ export function StaffManagementClient({
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   // Filtering
-  const filteredStaff = initialStaffList.filter((staff) => {
+  const filteredStaff = staffList.filter((staff) => {
     const matchesSearch =
       staff.full_name.toLowerCase().includes(search.toLowerCase()) ||
       (staff.phone && staff.phone.includes(search));
@@ -93,16 +103,20 @@ export function StaffManagementClient({
 
   function handleSaveRole() {
     if (!roleModalStaff) return;
+    const targetStaff = roleModalStaff;
     startTransition(async () => {
       const formData = new FormData();
-      formData.set("staff_id", roleModalStaff.id);
+      formData.set("staff_id", targetStaff.id);
       formData.set("role", newRole);
 
       const result = await updateStaffRoleAction(formData);
       if (result.success) {
         setFeedback({ type: "success", message: result.message });
-        roleModalStaff.role = newRole;
+        setStaffList((prev) =>
+          prev.map((s) => (s.id === targetStaff.id ? { ...s, role: newRole } : s))
+        );
         setRoleModalStaff(null);
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: result.message });
       }
@@ -130,7 +144,10 @@ export function StaffManagementClient({
       const result = await toggleStaffActiveAction(formData);
       if (result.success) {
         setFeedback({ type: "success", message: result.message });
-        staff.is_active = nextActive;
+        setStaffList((prev) =>
+          prev.map((s) => (s.id === staff.id ? { ...s, is_active: nextActive } : s))
+        );
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: result.message });
       }
@@ -146,18 +163,25 @@ export function StaffManagementClient({
 
   function handleSaveProfile() {
     if (!editModalStaff) return;
+    const targetStaff = editModalStaff;
     startTransition(async () => {
       const formData = new FormData();
-      formData.set("staff_id", editModalStaff.id);
+      formData.set("staff_id", targetStaff.id);
       formData.set("full_name", editFullName);
       formData.set("phone", editPhone);
 
       const result = await updateStaffProfileAction(formData);
       if (result.success) {
         setFeedback({ type: "success", message: result.message });
-        editModalStaff.full_name = editFullName;
-        editModalStaff.phone = editPhone;
+        setStaffList((prev) =>
+          prev.map((s) =>
+            s.id === targetStaff.id
+              ? { ...s, full_name: editFullName, phone: editPhone || null }
+              : s
+          )
+        );
         setEditModalStaff(null);
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: result.message });
       }
@@ -193,21 +217,21 @@ export function StaffManagementClient({
 
   function handleConfirmDelete() {
     if (!deleteModalStaff) return;
+    const deletingStaff = deleteModalStaff;
     startTransition(async () => {
       const formData = new FormData();
-      formData.set("staff_id", deleteModalStaff.id);
+      formData.set("staff_id", deletingStaff.id);
 
       const result = await safeDeleteStaffAction(formData);
       if (result.success) {
-        // Partial success: profile removed but auth account may be orphaned
         if ("warning" in result && result.warning) {
           setFeedback({ type: "warning", message: result.warning });
         } else {
           setFeedback({ type: "success", message: result.message });
         }
-        const idx = initialStaffList.findIndex((s) => s.id === deleteModalStaff.id);
-        if (idx > -1) initialStaffList.splice(idx, 1);
+        setStaffList((prev) => prev.filter((s) => s.id !== deletingStaff.id));
         setDeleteModalStaff(null);
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: result.message });
       }
