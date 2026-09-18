@@ -26,7 +26,10 @@ import type {
   AttendanceRecord,
   StudentResult,
   Profile,
+  StudentTransfer,
 } from "@/types";
+import type { Gender } from "@/config/constants";
+import { getHouseDistributionData, type HouseDistributionItem } from "@/lib/services/house-allocation";
 
 export interface DashboardProgramStat {
   name: string;
@@ -1011,3 +1014,333 @@ export async function getITSecurityMetrics(): Promise<{
     recentSecurityLogs: (secLogs ?? []) as AuditLog[],
   };
 }
+
+export async function getHouseDistributions(): Promise<HouseDistributionItem[]> {
+  const supabase = await createClient();
+  try {
+    return await getHouseDistributionData(supabase);
+  } catch (error) {
+    console.error("getHouseDistributions error:", error);
+    return [];
+  }
+}
+
+export async function getHouseStudentsForRebalance(): Promise<{
+  id: string;
+  fullName: string;
+  gender: Gender;
+  houseId: string;
+}[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("students")
+    .select("id, first_name, last_name, gender, house_id")
+    .eq("enrollment_status", "active")
+    .not("house_id", "is", null);
+
+  if (error || !data) {
+    console.error("getHouseStudentsForRebalance error:", error);
+    return [];
+  }
+
+  return data.map((s) => ({
+    id: s.id,
+    fullName: `${s.first_name} ${s.last_name}`,
+    gender: s.gender as Gender,
+    houseId: s.house_id as string,
+  }));
+}
+
+export interface TransferFilters {
+  direction?: "in" | "out";
+  status?: string;
+  search?: string;
+}
+
+export interface TransferMetrics {
+  total: number;
+  transferInCount: number;
+  transferOutCount: number;
+  pendingCount: number;
+  approvedCount: number;
+  completedCount: number;
+  rejectedCount: number;
+}
+
+export async function getTransfers(filters?: TransferFilters): Promise<StudentTransfer[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("student_transfers")
+    .select(`
+      *,
+      student:student_id (
+        id,
+        jhs_index_number,
+        first_name,
+        last_name,
+        gender
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (filters?.direction) {
+    query = query.eq("direction", filters.direction);
+  }
+  if (filters?.status && filters.status !== "all") {
+    query = query.eq("status", filters.status);
+  }
+  if (filters?.search) {
+    const s = filters.search.trim();
+    query = query.or(`transfer_reference.ilike.%${s}%,previous_school.ilike.%${s}%,destination_school.ilike.%${s}%,first_name.ilike.%${s}%,last_name.ilike.%${s}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("getTransfers error:", error);
+    return [];
+  }
+  return (data ?? []) as StudentTransfer[];
+}
+
+export async function getTransferById(id: string): Promise<StudentTransfer | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("student_transfers")
+    .select(`
+      *,
+      student:student_id (
+        id,
+        jhs_index_number,
+        first_name,
+        middle_name,
+        last_name,
+        gender,
+        student_type,
+        program_id,
+        house_id
+      )
+    `)
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    console.error("getTransferById error:", error);
+    return null;
+  }
+  return data as StudentTransfer;
+}
+
+export async function getTransferMetrics(): Promise<TransferMetrics> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("student_transfers")
+    .select("direction, status");
+
+  if (error || !data) {
+    return {
+      total: 0,
+      transferInCount: 0,
+      transferOutCount: 0,
+      pendingCount: 0,
+      approvedCount: 0,
+      completedCount: 0,
+      rejectedCount: 0,
+    };
+  }
+
+  const metrics: TransferMetrics = {
+    total: data.length,
+    transferInCount: data.filter((t) => t.direction === "in").length,
+    transferOutCount: data.filter((t) => t.direction === "out").length,
+    pendingCount: data.filter((t) => t.status === "pending" || t.status === "submitted" || t.status === "under_review").length,
+    approvedCount: data.filter((t) => t.status === "approved").length,
+    completedCount: data.filter((t) => t.status === "completed").length,
+    rejectedCount: data.filter((t) => t.status === "rejected").length,
+  };
+
+  return metrics;
+}
+
+export interface ActiveTransferStudent {
+  id: string;
+  jhs_index_number: string;
+  fullName: string;
+  gender: string;
+  programName?: string;
+  houseName?: string;
+  balance: number;
+}
+
+export async function getActiveStudentsForTransfer(): Promise<ActiveTransferStudent[]> {
+  const supabase = await createClient();
+  const { data: students, error } = await supabase
+    .from("students")
+    .select(`
+      id,
+      jhs_index_number,
+      first_name,
+      last_name,
+      gender,
+      program:programs(name),
+      house:houses(name)
+    `)
+    .eq("enrollment_status", "active")
+    .order("last_name", { ascending: true })
+    .limit(300);
+
+  if (error || !students) {
+    console.error("getActiveStudentsForTransfer error:", error);
+    return [];
+  }
+
+  const studentIds = students.map((s) => s.id);
+  const [{ data: charges }, { data: payments }] = await Promise.all([
+    supabase.from("student_fee_charges").select("student_id, amount_due").in("student_id", studentIds),
+    supabase.from("payments").select("student_id, amount").in("student_id", studentIds),
+  ]);
+
+  const chargeMap = new Map<string, number>();
+  charges?.forEach((c: { student_id: string; amount_due: number }) => {
+    chargeMap.set(c.student_id, (chargeMap.get(c.student_id) || 0) + Number(c.amount_due || 0));
+  });
+
+  const paymentMap = new Map<string, number>();
+  payments?.forEach((p: { student_id: string; amount: number }) => {
+    paymentMap.set(p.student_id, (paymentMap.get(p.student_id) || 0) + Number(p.amount || 0));
+  });
+
+  return students.map((s: any) => {
+    const due = chargeMap.get(s.id) || 0;
+    const paid = paymentMap.get(s.id) || 0;
+    const bal = Math.max(0, due - paid);
+
+    return {
+      id: s.id,
+      jhs_index_number: s.jhs_index_number,
+      fullName: `${s.first_name} ${s.last_name}`,
+      gender: s.gender,
+      programName: s.program?.name,
+      houseName: s.house?.name,
+      balance: bal,
+    };
+  });
+}
+
+export interface WaecStpCandidate {
+  id: string;
+  jhs_index_number: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  dateOfBirth: string | null;
+  programName: string | null;
+  programCode: string | null;
+  houseName: string | null;
+  resultsCount: number;
+  hasValidIndex: boolean;
+  hasFullBiodata: boolean;
+  hasProgram: boolean;
+  hasContinuousAssessment: boolean;
+  hasValidLetterGrades: boolean;
+  hasQualitativeRemarks: boolean;
+  isStpReady: boolean;
+  missingRequirements: string[];
+}
+
+export async function getWaecStpCandidates(): Promise<WaecStpCandidate[]> {
+  const supabase = await createClient();
+
+  const { data: students, error } = await supabase
+    .from("students")
+    .select(`
+      id,
+      jhs_index_number,
+      first_name,
+      last_name,
+      gender,
+      date_of_birth,
+      program:programs(name, code),
+      house:houses(name),
+      results:student_results(
+        id,
+        assessment_score,
+        exam_score,
+        total_score,
+        grade,
+        remarks,
+        conduct,
+        punctuality,
+        teacher_comment
+      )
+    `)
+    .eq("enrollment_status", "active")
+    .order("last_name", { ascending: true })
+    .limit(300);
+
+  if (error || !students) {
+    console.error("getWaecStpCandidates error:", error);
+    return [];
+  }
+
+  const validWaecGrades = new Set(["A1", "B2", "B3", "C4", "C5", "C6", "D7", "E8", "F9", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+
+  return students.map((s: any) => {
+    const missing: string[] = [];
+
+    // 1. 10-digit index
+    const hasValidIndex = /^\d{10}$/.test(s.jhs_index_number?.trim() || "");
+    if (!hasValidIndex) missing.push("Invalid JHS Index Number (must be exactly 10 digits)");
+
+    // 2. Full Biodata
+    const hasFullBiodata = Boolean(s.first_name && s.last_name && s.gender && s.date_of_birth);
+    if (!hasFullBiodata) {
+      if (!s.date_of_birth) missing.push("Missing Date of Birth");
+    }
+
+    // 3. Program
+    const hasProgram = Boolean(s.program?.name);
+    if (!hasProgram) missing.push("No Academic Program Assigned");
+
+    // 4. Assessment Scores (30% continuous + 70% exam)
+    const results = s.results || [];
+    const hasResults = results.length > 0;
+    const hasContinuousAssessment = hasResults && results.every((r: any) => r.assessment_score != null && r.exam_score != null);
+    if (!hasResults) missing.push("No Terminal Results / Continuous Assessments Recorded");
+    else if (!hasContinuousAssessment) missing.push("Incomplete 30% Class / 70% Exam Score Breakdown");
+
+    // 5. Letter Grades
+    const hasValidLetterGrades = hasResults && results.every((r: any) => r.grade && validWaecGrades.has(r.grade));
+    if (hasResults && !hasValidLetterGrades) missing.push("Non-Standard WAEC Grading");
+
+    // 6. Qualitative Remarks
+    const hasQualitativeRemarks = results.some((r: any) => r.remarks || r.teacher_comment || r.conduct);
+    if (hasResults && !hasQualitativeRemarks) missing.push("Missing Teacher Remarks / Conduct");
+
+    const isStpReady = hasValidIndex && hasFullBiodata && hasProgram && hasResults && hasContinuousAssessment;
+
+    return {
+      id: s.id,
+      jhs_index_number: s.jhs_index_number,
+      fullName: `${s.first_name} ${s.last_name}`,
+      firstName: s.first_name,
+      lastName: s.last_name,
+      gender: s.gender,
+      dateOfBirth: s.date_of_birth,
+      programName: s.program?.name || null,
+      programCode: s.program?.code || null,
+      houseName: s.house?.name || null,
+      resultsCount: results.length,
+      hasValidIndex,
+      hasFullBiodata,
+      hasProgram,
+      hasContinuousAssessment,
+      hasValidLetterGrades,
+      hasQualitativeRemarks,
+      isStpReady,
+      missingRequirements: missing,
+    };
+  });
+}
+
+

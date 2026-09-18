@@ -11,6 +11,7 @@ import {
   type StudentEnrollmentValues,
   type StudentUpdateValues,
 } from "@/lib/validation/student-enrollment";
+import { getHouseDistributionData, assignBalancedHouse } from "@/lib/services/house-allocation";
 
 export type EnrollmentState =
   | { success: true; indexNumber: string; studentId: string }
@@ -100,6 +101,20 @@ export async function createStudentAction(
 
   const values: StudentEnrollmentValues = parsed.data;
   const supabase = await createClient();
+
+  let resolvedHouseId = values.house_id;
+  if (!resolvedHouseId) {
+    try {
+      const distributions = await getHouseDistributionData(supabase);
+      if (distributions && distributions.length > 0) {
+        const allocation = assignBalancedHouse(values.gender, distributions);
+        resolvedHouseId = allocation.assignedHouseId;
+      }
+    } catch (allocError) {
+      console.warn("Auto house allocation fallback:", allocError);
+    }
+  }
+
   const { data: student, error } = await supabase.rpc("enroll_student", {
     p_jhs_index_number: values.jhs_index_number,
     p_first_name: values.first_name,
@@ -117,7 +132,7 @@ export async function createStudentAction(
     p_parent_email: values.parent_email,
     p_parent_address: values.parent_address,
     p_program_id: values.program_id,
-    p_house_id: values.house_id,
+    p_house_id: resolvedHouseId,
     p_student_type: values.student_type,
     p_academic_year_id: values.academic_year_id,
     p_photo_path: null,
