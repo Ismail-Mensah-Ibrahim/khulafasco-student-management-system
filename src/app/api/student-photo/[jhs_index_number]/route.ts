@@ -26,15 +26,27 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ jhs_in
     const { jhs_index_number } = await context.params;
     if (!jhs_index_number) return new Response('Missing index', { status: 400 });
 
-    // Require an authenticated session and check role (admin or finance_officer)
     const session = await getOptionalSession();
     if (!session) return new Response('Unauthorized', { status: 401 });
-    if (session.role !== 'admin' && session.role !== 'finance_officer') {
-      return new Response('Forbidden', { status: 403 });
-    }
 
     const student = await getStudentByJhsIndexNumber(jhs_index_number);
     if (!student) return new Response('Student not found', { status: 404 });
+
+    // Strict Role Authorization:
+    // - Global staff (Admin, Headmaster, Academic Head, Finance, Teacher, IT) have school-wide photo access.
+    // - House Master & House Mistress are strictly restricted to students in their assigned house.
+    const isGlobalStaff = ['admin', 'headmaster', 'academic_head', 'finance_officer', 'teacher', 'it_officer'].includes(session.role);
+    const isHouseStaff = session.role === 'house_master' || session.role === 'house_mistress';
+
+    if (!isGlobalStaff && !isHouseStaff) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    if (isHouseStaff) {
+      if (!session.houseId || student.house_id !== session.houseId) {
+        return new Response('Forbidden: Student not in your assigned house', { status: 403 });
+      }
+    }
 
     const photoPath = student.photo_path;
     if (!photoPath) return new Response('Photo not found', { status: 404 });

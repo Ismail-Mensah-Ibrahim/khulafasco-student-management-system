@@ -17,6 +17,7 @@ export interface SessionUser {
   email: string;
   role: UserRole;
   fullName: string;
+  houseId?: string | null;
 }
 
 /**
@@ -37,10 +38,10 @@ export const verifySession = cache(async (): Promise<SessionUser> => {
     redirect("/login");
   }
 
-  // Fetch the staff profile to get the application role
+  // Fetch the staff profile to get the application role and house affiliation
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role, full_name, is_active")
+    .select("role, full_name, is_active, house_id")
     .eq("id", user.id)
     .single();
 
@@ -60,6 +61,7 @@ export const verifySession = cache(async (): Promise<SessionUser> => {
     email: user.email ?? "",
     role: profile.role as UserRole,
     fullName: profile.full_name,
+    houseId: (profile as { house_id?: string | null }).house_id ?? null,
   };
 });
 
@@ -79,7 +81,7 @@ export const getOptionalSession = cache(async (): Promise<SessionUser | null> =>
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, full_name, is_active")
+      .select("role, full_name, is_active, house_id")
       .eq("id", user.id)
       .single();
 
@@ -90,6 +92,7 @@ export const getOptionalSession = cache(async (): Promise<SessionUser | null> =>
       email: user.email ?? "",
       role: profile.role as UserRole,
       fullName: profile.full_name,
+      houseId: (profile as { house_id?: string | null }).house_id ?? null,
     };
   } catch {
     return null;
@@ -155,6 +158,13 @@ export async function requireFinanceOfficer(): Promise<SessionUser> {
  */
 export async function requireDomesticOfficer(): Promise<SessionUser> {
   return requireRole(["domestic_officer", "admin"]);
+}
+
+/**
+ * Verify session AND require House Master, House Mistress, or Admin role.
+ */
+export async function requireHouseStaff(): Promise<SessionUser> {
+  return requireRole(["house_master", "house_mistress", "admin"]);
 }
 
 /**

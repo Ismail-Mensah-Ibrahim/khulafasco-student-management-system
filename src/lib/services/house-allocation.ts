@@ -21,19 +21,42 @@ export interface HouseAllocationResult {
 
 export interface RebalanceMove {
   studentId: string;
+  jhsIndexNumber?: string;
   studentName: string;
   gender: Gender;
-  fromHouseId: string;
+  fromHouseId: string | null;
   fromHouseName: string;
   toHouseId: string;
   toHouseName: string;
+  isNewAssignment?: boolean;
+}
+
+export interface StayingStudent {
+  studentId: string;
+  jhsIndexNumber?: string;
+  studentName: string;
+  gender: Gender;
+  houseId: string;
+  houseName: string;
+}
+
+export interface StudentRebalanceCandidate {
+  id: string;
+  jhsIndexNumber?: string;
+  fullName: string;
+  gender: Gender;
+  houseId: string | null;
 }
 
 export interface RebalancePlan {
   currentDistribution: HouseDistributionItem[];
   proposedDistribution: HouseDistributionItem[];
   moves: RebalanceMove[];
+  stayingStudents: StayingStudent[];
+  totalEvaluated: number;
   totalMoves: number;
+  totalNewAssignments: number;
+  totalReassignments: number;
   isBalanced: boolean;
 }
 
@@ -44,13 +67,24 @@ export async function getHouseDistributionData(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, "public", any>
 ): Promise<HouseDistributionItem[]> {
-  const { data: houses, error: housesError } = await supabase
+  let houses: { id: string; name: string; code?: string | null; capacity?: number | null; is_active?: boolean | null }[] | null = null;
+  const { data: fullHouses, error: fullError } = await supabase
     .from("houses")
-    .select("id, name, code, capacity, is_active")
+    .select("*")
     .order("name", { ascending: true });
 
-  if (housesError || !houses) {
-    throw new Error("Unable to fetch houses for allocation.");
+  if (fullError || !fullHouses) {
+    const { data: basicHouses, error: basicError } = await supabase
+      .from("houses")
+      .select("id, name, is_active")
+      .order("name", { ascending: true });
+
+    if (basicError || !basicHouses) {
+      throw new Error("Unable to fetch houses for allocation: " + (fullError?.message || basicError?.message));
+    }
+    houses = basicHouses;
+  } else {
+    houses = fullHouses;
   }
 
   // Count active students by house and gender
@@ -206,140 +240,255 @@ export function batchAssignBalancedHouses<T extends { gender: Gender; house_id?:
 
 /**
  * Compute optimal rebalance moves to minimize gender and total skew across active houses.
+ * Unassigned students are prioritized to fill house deficits so that existing
+ * valid house assignments are preserved whenever possible.
  */
 export function computeHouseRebalance(
-  currentStudents: {
-    id: string;
-    fullName: string;
-    gender: Gender;
-    houseId: string;
-  }[],
+  currentStudents: StudentRebalanceCandidate[],
   houses: HouseDistributionItem[]
 ): RebalancePlan {
   const activeHouses = houses.filter((h) => h.is_active);
-  if (activeHouses.length <= 1 || currentStudents.length === 0) {
+  if (activeHouses.length === 0 || currentStudents.length === 0) {
     return {
       currentDistribution: houses,
       proposedDistribution: houses,
       moves: [],
+      stayingStudents: [],
+      totalEvaluated: currentStudents.length,
       totalMoves: 0,
+      totalNewAssignments: 0,
+      totalReassignments: 0,
       isBalanced: true,
     };
   }
 
   const houseMap = new Map(activeHouses.map((h) => [h.id, h]));
-  const males = currentStudents.filter((s) => s.gender === "male" && houseMap.has(s.houseId));
-  const females = currentStudents.filter((s) => s.gender === "female" && houseMap.has(s.houseId));
-
   const numHouses = activeHouses.length;
-  const targetMaleBase = Math.floor(males.length / numHouses);
-  const targetFemaleBase = Math.floor(females.length / numHouses);
 
+  const males = currentStudents.filter((s) => s.gender === "male");
+  const females = currentStudents.filter((s) => s.gender === "female");
+
+  const targetMaleBase = Math.floor(males.length / numHouses);
   const maleRemainder = males.length % numHouses;
+
+  const currentHouseCounts = new Map<
+    string,
+    { maleStudents: StudentRebalanceCandidate[]; femaleStudents: StudentRebalanceCandidate[] }
+  >();
+  for (const h of activeHouses) {
+    currentHouseCounts.set(h.id, { maleStudents: [], femaleStudents: [] });
+  }
+
+  const unassignedMales: StudentRebalanceCandidate[] = [];
+  const unassignedFemales: StudentRebalanceCandidate[] = [];
+
+  for (const s of currentStudents) {
+    if (s.houseId && houseMap.has(s.houseId)) {
+      const entry = currentHouseCounts.get(s.houseId)!;
+      if (s.gender === "male") entry.maleStudents.push(s);
+      else entry.femaleStudents.push(s);
+    } else {
+      if (s.gender === "male") unassignedMales.push(s);
+      else unassignedFemales.push(s);
+    }
+  }
+
+  // Sort houses by current male count descending to award remainder males to houses that already have them
+  const housesSortedByMaleAffinity = [...activeHouses].sort((a, b) => {
+    const aMales = currentHouseCounts.get(a.id)?.maleStudents.length ?? 0;
+    const bMales = currentHouseCounts.get(b.id)?.maleStudents.length ?? 0;
+    if (aMales !== bMales) return bMales - aMales;
+    return a.name.localeCompare(b.name);
+  });
+
+  const housesWithExtraMale = new Set(
+    housesSortedByMaleAffinity.slice(0, maleRemainder).map((h) => h.id)
+  );
+
+  const targetFemaleBase = Math.floor(females.length / numHouses);
   const femaleRemainder = females.length % numHouses;
 
-  // Compute targets per house
-  const targetDistribution = activeHouses.map((h, index) => ({
-    houseId: h.id,
-    houseName: h.name,
-    targetMale: targetMaleBase + (index < maleRemainder ? 1 : 0),
-    targetFemale: targetFemaleBase + (index < femaleRemainder ? 1 : 0),
-  }));
+  // For females: prioritize houses that did NOT receive an extra male to keep total counts equal
+  const nonExtraMaleHouses = activeHouses.filter((h) => !housesWithExtraMale.has(h.id));
+  const extraMaleHouses = activeHouses.filter((h) => housesWithExtraMale.has(h.id));
+
+  nonExtraMaleHouses.sort((a, b) => {
+    const aFem = currentHouseCounts.get(a.id)?.femaleStudents.length ?? 0;
+    const bFem = currentHouseCounts.get(b.id)?.femaleStudents.length ?? 0;
+    if (aFem !== bFem) return bFem - aFem;
+    return a.name.localeCompare(b.name);
+  });
+  extraMaleHouses.sort((a, b) => {
+    const aFem = currentHouseCounts.get(a.id)?.femaleStudents.length ?? 0;
+    const bFem = currentHouseCounts.get(b.id)?.femaleStudents.length ?? 0;
+    if (aFem !== bFem) return bFem - aFem;
+    return a.name.localeCompare(b.name);
+  });
+
+  const combinedFemaleCandidates = [...nonExtraMaleHouses, ...extraMaleHouses];
+  const housesWithExtraFemale = new Set(
+    combinedFemaleCandidates.slice(0, femaleRemainder).map((h) => h.id)
+  );
+
+  const targetMap = new Map<string, { targetMale: number; targetFemale: number; targetTotal: number }>();
+  for (const h of activeHouses) {
+    const targetMale = targetMaleBase + (housesWithExtraMale.has(h.id) ? 1 : 0);
+    const targetFemale = targetFemaleBase + (housesWithExtraFemale.has(h.id) ? 1 : 0);
+    targetMap.set(h.id, {
+      targetMale,
+      targetFemale,
+      targetTotal: targetMale + targetFemale,
+    });
+  }
 
   const moves: RebalanceMove[] = [];
+  const stayingStudents: StayingStudent[] = [];
 
   function balanceGender(
-    genderList: typeof currentStudents,
-    gender: Gender,
-    getTarget: (hId: string) => number
+    unassignedList: StudentRebalanceCandidate[],
+    getHouseStudents: (hId: string) => StudentRebalanceCandidate[],
+    getTarget: (hId: string) => number,
+    gender: Gender
   ) {
-    const grouped = new Map<string, typeof currentStudents>();
-    for (const h of activeHouses) {
-      grouped.set(h.id, []);
-    }
-    for (const s of genderList) {
-      grouped.get(s.houseId)?.push(s);
-    }
-
-    // Identify surplus and deficit houses
-    const surplus: { houseId: string; count: number }[] = [];
-    const deficit: { houseId: string; needed: number }[] = [];
+    const deficitHouses: { houseId: string; needed: number }[] = [];
+    const surplusHouses: { houseId: string; surplusList: StudentRebalanceCandidate[] }[] = [];
 
     for (const h of activeHouses) {
-      const current = grouped.get(h.id)?.length ?? 0;
+      const currentList = getHouseStudents(h.id);
       const target = getTarget(h.id);
-      if (current > target) {
-        surplus.push({ houseId: h.id, count: current - target });
-      } else if (current < target) {
-        deficit.push({ houseId: h.id, needed: target - current });
+      if (currentList.length < target) {
+        deficitHouses.push({ houseId: h.id, needed: target - currentList.length });
+        for (const s of currentList) {
+          stayingStudents.push({
+            studentId: s.id,
+            jhsIndexNumber: s.jhsIndexNumber,
+            studentName: s.fullName,
+            gender: s.gender,
+            houseId: h.id,
+            houseName: h.name,
+          });
+        }
+      } else if (currentList.length > target) {
+        const stayingCount = target;
+        for (let i = 0; i < stayingCount; i++) {
+          const s = currentList[i];
+          stayingStudents.push({
+            studentId: s.id,
+            jhsIndexNumber: s.jhsIndexNumber,
+            studentName: s.fullName,
+            gender: s.gender,
+            houseId: h.id,
+            houseName: h.name,
+          });
+        }
+        surplusHouses.push({
+          houseId: h.id,
+          surplusList: currentList.slice(stayingCount),
+        });
+      } else {
+        for (const s of currentList) {
+          stayingStudents.push({
+            studentId: s.id,
+            jhsIndexNumber: s.jhsIndexNumber,
+            studentName: s.fullName,
+            gender: s.gender,
+            houseId: h.id,
+            houseName: h.name,
+          });
+        }
       }
     }
 
-    let deficitIdx = 0;
-    for (const s of surplus) {
-      const studentsInHouse = grouped.get(s.houseId) ?? [];
-      let movedFromThisHouse = 0;
-
-      while (movedFromThisHouse < s.count && deficitIdx < deficit.length) {
-        const targetDeficit = deficit[deficitIdx];
-        const studentToMove = studentsInHouse[movedFromThisHouse];
-
+    // Step A: Fill deficits with unassigned students
+    let unassignedIdx = 0;
+    for (const d of deficitHouses) {
+      while (d.needed > 0 && unassignedIdx < unassignedList.length) {
+        const student = unassignedList[unassignedIdx++];
         moves.push({
-          studentId: studentToMove.id,
-          studentName: studentToMove.fullName,
+          studentId: student.id,
+          jhsIndexNumber: student.jhsIndexNumber,
+          studentName: student.fullName,
           gender,
-          fromHouseId: s.houseId,
-          fromHouseName: houseMap.get(s.houseId)?.name ?? "Unknown",
-          toHouseId: targetDeficit.houseId,
-          toHouseName: houseMap.get(targetDeficit.houseId)?.name ?? "Unknown",
+          fromHouseId: null,
+          fromHouseName: "Unassigned",
+          toHouseId: d.houseId,
+          toHouseName: houseMap.get(d.houseId)?.name ?? "Unknown",
+          isNewAssignment: true,
         });
+        d.needed--;
+      }
+    }
 
-        movedFromThisHouse++;
-        targetDeficit.needed--;
-        if (targetDeficit.needed === 0) {
+    // Step B: If deficits still remain and surplus exists, transfer surplus students
+    let deficitIdx = 0;
+    for (const s of surplusHouses) {
+      for (const student of s.surplusList) {
+        while (deficitIdx < deficitHouses.length && deficitHouses[deficitIdx].needed === 0) {
           deficitIdx++;
+        }
+        if (deficitIdx < deficitHouses.length) {
+          const targetD = deficitHouses[deficitIdx];
+          moves.push({
+            studentId: student.id,
+            jhsIndexNumber: student.jhsIndexNumber,
+            studentName: student.fullName,
+            gender,
+            fromHouseId: s.houseId,
+            fromHouseName: houseMap.get(s.houseId)?.name ?? "Unknown",
+            toHouseId: targetD.houseId,
+            toHouseName: houseMap.get(targetD.houseId)?.name ?? "Unknown",
+            isNewAssignment: false,
+          });
+          targetD.needed--;
         }
       }
     }
   }
 
-  const targetMaleMap = new Map(targetDistribution.map((t) => [t.houseId, t.targetMale]));
-  const targetFemaleMap = new Map(targetDistribution.map((t) => [t.houseId, t.targetFemale]));
+  balanceGender(
+    unassignedMales,
+    (hId) => currentHouseCounts.get(hId)?.maleStudents ?? [],
+    (hId) => targetMap.get(hId)?.targetMale ?? targetMaleBase,
+    "male"
+  );
 
-  balanceGender(males, "male", (id) => targetMaleMap.get(id) ?? targetMaleBase);
-  balanceGender(females, "female", (id) => targetFemaleMap.get(id) ?? targetFemaleBase);
+  balanceGender(
+    unassignedFemales,
+    (hId) => currentHouseCounts.get(hId)?.femaleStudents ?? [],
+    (hId) => targetMap.get(hId)?.targetFemale ?? targetFemaleBase,
+    "female"
+  );
 
-  // Calculate proposed distribution after moves
-  const proposed = houses.map((h) => {
-    let male = h.maleCount;
-    let female = h.femaleCount;
-
-    for (const m of moves) {
-      if (m.fromHouseId === h.id) {
-        if (m.gender === "male") male--;
-        else female--;
-      }
-      if (m.toHouseId === h.id) {
-        if (m.gender === "male") male++;
-        else female++;
-      }
-    }
-
-    const total = male + female;
+  const proposedDistribution: HouseDistributionItem[] = activeHouses.map((h) => {
+    const targets = targetMap.get(h.id)!;
+    const capacity = h.capacity ?? 150;
+    const total = targets.targetTotal;
+    const occupancyPercent = capacity > 0 ? Math.round((total / capacity) * 100) : 0;
     return {
-      ...h,
-      maleCount: male,
-      femaleCount: female,
+      id: h.id,
+      name: h.name,
+      code: h.code || h.name.slice(0, 3).toUpperCase(),
+      capacity,
+      is_active: h.is_active,
+      maleCount: targets.targetMale,
+      femaleCount: targets.targetFemale,
       totalCount: total,
-      occupancyPercent: h.capacity > 0 ? Math.round((total / h.capacity) * 100) : 0,
+      occupancyPercent,
     };
   });
 
+  const totalNewAssignments = moves.filter((m) => m.isNewAssignment).length;
+  const totalReassignments = moves.filter((m) => !m.isNewAssignment).length;
+
   return {
     currentDistribution: houses,
-    proposedDistribution: proposed,
+    proposedDistribution,
     moves,
+    stayingStudents,
+    totalEvaluated: currentStudents.length,
     totalMoves: moves.length,
+    totalNewAssignments,
+    totalReassignments,
     isBalanced: moves.length === 0,
   };
 }

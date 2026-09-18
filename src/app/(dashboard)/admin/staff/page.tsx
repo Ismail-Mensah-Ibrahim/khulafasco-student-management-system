@@ -3,7 +3,7 @@ import { ShieldCheck } from "lucide-react";
 import { SCHOOL } from "@/config/branding";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { requireAdmin } from "@/lib/dal";
-import { getStaffProfiles } from "@/lib/data";
+import { getStaffProfiles, getHouses } from "@/lib/data";
 import { StaffCreateForm } from "../_components/AdminCreateForms";
 import { StaffManagementClient } from "./_components/StaffManagementClient";
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function StaffAccessPage() {
   const session = await requireAdmin();
-  const staffList = await getStaffProfiles();
+  const [staffList, houses] = await Promise.all([getStaffProfiles(), getHouses()]);
 
   return (
     <div className="space-y-6">
@@ -69,6 +69,7 @@ export default async function StaffAccessPage() {
       <StaffManagementClient
         initialStaffList={staffList}
         currentUserId={session.id}
+        houses={houses}
       />
     </div>
   );

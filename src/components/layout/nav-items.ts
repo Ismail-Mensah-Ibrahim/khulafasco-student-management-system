@@ -24,6 +24,7 @@ import {
   UploadCloud,
   ArrowRightLeft,
   FileCheck,
+  ClipboardList,
 } from "lucide-react";
 import type { UserRole } from "@/config/constants";
 
@@ -103,6 +104,17 @@ export function getNavItemsForRole(role: UserRole): NavItem[] {
         { label: "Student Results", href: "/teacher/results", icon: FileSpreadsheet, roles: ["teacher"], section: "Teaching" },
         { label: "My Requests", href: "/requests", icon: FileText, roles: ["teacher"], section: "Workplace" },
         { label: "IT Support", href: "/it/tickets", icon: LifeBuoy, roles: ["teacher"], section: "Support" },
+      ];
+
+    case "house_master":
+    case "house_mistress":
+      return [
+        { label: "House Dashboard", href: "/house/dashboard", icon: LayoutDashboard, roles: [role] },
+        { label: "House Students", href: "/house/students", icon: Users, roles: [role], section: "House Operations" },
+        { label: "Exeat Slips", href: "/house/exeats", icon: ClipboardList, roles: [role], section: "Hostel & Welfare" },
+        { label: "Hostel Requests", href: "/requests", icon: FileText, roles: [role], section: "Supplies & Maintenance" },
+        { label: "New Request", href: "/requests/new", icon: Package, roles: [role], section: "Supplies & Maintenance" },
+        { label: "IT Support", href: "/it/tickets", icon: LifeBuoy, roles: [role], section: "Support" },
       ];
 
     case "finance_officer":

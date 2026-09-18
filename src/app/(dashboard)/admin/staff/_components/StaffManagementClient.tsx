@@ -19,7 +19,7 @@ import {
   Phone,
 } from "lucide-react";
 import { ROLE_LABELS, ROLES, type UserRole } from "@/config/constants";
-import type { Profile, StaffDeletionSafety } from "@/types";
+import type { Profile, StaffDeletionSafety, House } from "@/types";
 import {
   updateStaffRoleAction,
   toggleStaffActiveAction,
@@ -44,11 +44,13 @@ import {
 interface StaffManagementClientProps {
   initialStaffList: Profile[];
   currentUserId: string;
+  houses?: House[];
 }
 
 export function StaffManagementClient({
   initialStaffList,
   currentUserId,
+  houses = [],
 }: StaffManagementClientProps) {
   const router = useRouter();
   const [staffList, setStaffList] = useState<Profile[]>(initialStaffList);
@@ -69,6 +71,7 @@ export function StaffManagementClient({
   // Dialog states
   const [roleModalStaff, setRoleModalStaff] = useState<Profile | null>(null);
   const [newRole, setNewRole] = useState<UserRole>("teacher");
+  const [selectedHouseId, setSelectedHouseId] = useState<string>("");
 
   const [editModalStaff, setEditModalStaff] = useState<Profile | null>(null);
   const [editFullName, setEditFullName] = useState("");
@@ -98,6 +101,7 @@ export function StaffManagementClient({
   function handleOpenRoleModal(staff: Profile) {
     setRoleModalStaff(staff);
     setNewRole(staff.role);
+    setSelectedHouseId(staff.house_id || "");
     setFeedback(null);
   }
 
@@ -108,12 +112,13 @@ export function StaffManagementClient({
       const formData = new FormData();
       formData.set("staff_id", targetStaff.id);
       formData.set("role", newRole);
+      formData.set("house_id", selectedHouseId || "");
 
       const result = await updateStaffRoleAction(formData);
       if (result.success) {
         setFeedback({ type: "success", message: result.message });
         setStaffList((prev) =>
-          prev.map((s) => (s.id === targetStaff.id ? { ...s, role: newRole } : s))
+          prev.map((s) => (s.id === targetStaff.id ? { ...s, role: newRole, house_id: selectedHouseId || null } : s))
         );
         setRoleModalStaff(null);
         router.refresh();
@@ -311,7 +316,7 @@ export function StaffManagementClient({
               onChange={(e) => setSelectedRole(e.target.value)}
               className="h-9 px-3 rounded-md border border-input bg-background text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
             >
-              <option value="all">All Roles (8)</option>
+              <option value="all">All Roles ({ROLES.length})</option>
               {ROLES.map((r) => (
                 <option key={r} value={r}>
                   {ROLE_LABELS[r]}
@@ -385,6 +390,11 @@ export function StaffManagementClient({
                         <Badge variant="outline" className="text-xs font-semibold">
                           {ROLE_LABELS[staff.role] ?? staff.role}
                         </Badge>
+                        {staff.house_id && (
+                          <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
+                            House: {houses.find((h) => h.id === staff.house_id)?.name || "Assigned"}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3.5">
                         <Badge
@@ -506,6 +516,26 @@ export function StaffManagementClient({
               </select>
             </div>
 
+            {(newRole === "house_master" || newRole === "house_mistress") && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                  Assign Residential House *
+                </label>
+                <select
+                  value={selectedHouseId}
+                  onChange={(e) => setSelectedHouseId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">-- Choose House --</option>
+                  {houses.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name} ({h.code || h.name.slice(0, 3).toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
               <p className="font-semibold flex items-center gap-1.5">
                 <AlertTriangle className="size-4 shrink-0 text-amber-600" /> Authoritative Security Notice
@@ -523,7 +553,11 @@ export function StaffManagementClient({
             <Button
               size="sm"
               onClick={handleSaveRole}
-              disabled={isPending || newRole === roleModalStaff?.role}
+              disabled={
+                isPending ||
+                (newRole === roleModalStaff?.role &&
+                  selectedHouseId === (roleModalStaff?.house_id || ""))
+              }
             >
               {isPending ? "Updating Role..." : "Confirm Role Change"}
             </Button>
