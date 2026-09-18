@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { CheckCircle2, Loader2, UploadCloud, X, ArrowLeft, User } from "lucide-react";
+import { CheckCircle2, Loader2, UploadCloud, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,8 +16,9 @@ import {
   GUARDIAN_RELATIONSHIPS,
 } from "@/config/constants";
 import { updateStudentAction, type UpdateStudentState } from "@/lib/actions/students";
-import { STUDENT_PHOTO_MAX_BYTES, STUDENT_PHOTO_TYPES } from "@/lib/storage/student-photos";
+import { StudentPhotoCapture } from "@/components/shared/StudentPhotoCapture";
 import type { AcademicYear, House, Program, Student } from "@/types";
+
 
 interface StudentEditFormProps {
   student: Student;
@@ -54,19 +55,13 @@ export function StudentEditForm({
   );
 
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [directUploading, setDirectUploading] = useState(false);
+  const [directSuccessMessage, setDirectSuccessMessage] = useState<string | null>(null);
 
   const fieldErrors = state && !state.success ? state.fieldErrors ?? {} : {};
   const errorFor = (name: string) => fieldErrors[name]?.[0];
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
 
   useEffect(() => {
     if (!state?.success) return;
@@ -103,42 +98,34 @@ export function StudentEditForm({
     };
   }, [selectedPhoto, state, student.id]);
 
-  function clearPhoto() {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setSelectedPhoto(null);
-    setPreviewUrl(null);
+  const handleDirectUpload = async () => {
+    if (!selectedPhoto) return;
+    setDirectUploading(true);
     setPhotoError(null);
-    if (photoInputRef.current) photoInputRef.current.value = "";
-  }
+    setDirectSuccessMessage(null);
 
-  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
-    setPhotoError(null);
+    const formData = new FormData();
+    formData.append("studentId", student.id);
+    formData.append("photo", selectedPhoto);
 
-    if (!file) {
-      clearPhoto();
-      return;
-    }
-
-    if (!(STUDENT_PHOTO_TYPES as readonly string[]).includes(file.type)) {
+    try {
+      const response = await fetch("/api/student-photo/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const result = (await response.json()) as { error?: string; success?: boolean };
+      if (!response.ok || !result.success) {
+        throw new Error(result.error ?? "Unable to upload the student photo.");
+      }
+      setDirectSuccessMessage("Photograph uploaded and updated successfully!");
       setSelectedPhoto(null);
-      setPhotoError("Choose a JPEG, PNG, or WebP image.");
-      event.target.value = "";
-      return;
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : "Unable to upload the student photo.");
+    } finally {
+      setDirectUploading(false);
     }
+  };
 
-    if (file.size <= 0 || file.size > STUDENT_PHOTO_MAX_BYTES) {
-      setSelectedPhoto(null);
-      setPhotoError("The photo must be smaller than 5 MB.");
-      event.target.value = "";
-      return;
-    }
-
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setSelectedPhoto(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    setUploadStatus("idle");
-  }
 
   return (
     <form action={formAction} className="space-y-8">
@@ -518,80 +505,50 @@ export function StudentEditForm({
             5. Student Photograph
           </h3>
           <p className="text-xs text-muted-foreground">
-            Upload or replace the student&apos;s passport-size photograph (Max 5 MB, JPEG, PNG, or WebP).
+            Scan with camera, take a live photo, or upload an image file (JPEG, PNG, or WebP, up to 5 MB).
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start gap-6">
-          {/* Current / Preview image */}
-          <div className="w-36 h-44 rounded-lg border flex items-center justify-center overflow-hidden bg-muted/20 flex-shrink-0 relative">
-            {previewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={previewUrl} alt="New photo preview" className="w-full h-full object-cover" />
-            ) : student.photo_path ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={`/api/student-photo/${encodeURIComponent(student.jhs_index_number)}`}
-                alt="Current student photo"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="text-center p-3 text-muted-foreground">
-                <User className="w-10 h-10 mx-auto opacity-30 mb-1" />
-                <span className="text-xs">No photo</span>
-              </div>
-            )}
+        <StudentPhotoCapture
+          value={selectedPhoto}
+          currentPhotoUrl={student.photo_path ? `/api/student-photo/${encodeURIComponent(student.jhs_index_number)}` : null}
+          onChange={(file) => {
+            setSelectedPhoto(file);
+            setPhotoError(null);
+            setDirectSuccessMessage(null);
+          }}
+          error={photoError}
+        />
+
+        {directSuccessMessage && (
+          <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg font-medium">
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+            <span>{directSuccessMessage}</span>
           </div>
+        )}
 
-          {/* Upload / Replace controls */}
-          <div className="space-y-3 flex-1">
-            <div className="flex items-center gap-3">
-              <label
-                htmlFor="student_photo_input"
-                className="cursor-pointer inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-                style={{ borderColor: "var(--border)" }}
-              >
-                <UploadCloud className="h-4 w-4" />
-                {student.photo_path ? "Replace Photograph" : "Upload Photograph"}
-              </label>
-              <input
-                ref={photoInputRef}
-                id="student_photo_input"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handlePhotoChange}
-                className="hidden"
-              />
-              {selectedPhoto ? (
-                <Button type="button" variant="ghost" size="sm" onClick={clearPhoto} className="text-destructive">
-                  <X className="h-4 w-4 mr-1" /> Remove selection
-                </Button>
-              ) : null}
-            </div>
-
-            {selectedPhoto ? (
-              <div className="text-xs space-y-1">
-                <p className="font-medium text-foreground">
-                  New file selected: {selectedPhoto.name} ({(selectedPhoto.size / 1024).toFixed(1)} KB)
-                </p>
-                <p className="text-muted-foreground">
-                  The photo will be saved when you click &quot;Save Student Profile&quot; below.
-                </p>
-              </div>
-            ) : student.photo_path ? (
-              <p className="text-xs text-muted-foreground">
-                A photograph is currently on file. Select a new file above to replace it.
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                No photograph has been uploaded yet. Choose an image above to add one.
-              </p>
-            )}
-
-            {photoError ? <p className="text-xs text-destructive">{photoError}</p> : null}
+        {selectedPhoto && (
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleDirectUpload}
+              disabled={directUploading}
+              className="text-xs"
+            >
+              {directUploading ? (
+                <><Loader2 className="size-3.5 mr-1.5 animate-spin" /> Uploading Photo...</>
+              ) : (
+                <><UploadCloud className="size-3.5 mr-1.5" /> Save &amp; Upload Photo Now</>
+              )}
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Or save all changes together when you click &quot;Save Student Profile&quot; below.
+            </span>
           </div>
-        </div>
+        )}
       </section>
+
 
       {/* Form Submission Actions */}
       <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "var(--border)" }}>

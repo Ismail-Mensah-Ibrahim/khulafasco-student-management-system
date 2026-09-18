@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { getStudentByJhsIndexNumber } from '@/lib/data';
 import { getOptionalSession } from '@/lib/dal';
 
@@ -39,8 +39,9 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ jhs_in
     const photoPath = student.photo_path;
     if (!photoPath) return new Response('Photo not found', { status: 404 });
 
-    const supabase = await createClient();
-    const { data, error } = await supabase.storage.from('student-photos').download(photoPath);
+    const adminClient = createAdminClient();
+    const storageClient = adminClient ?? (await createClient());
+    const { data, error } = await storageClient.storage.from('student-photos').download(photoPath);
 
     if (error || !data) {
       return new Response('Unable to fetch photo', { status: 500 });

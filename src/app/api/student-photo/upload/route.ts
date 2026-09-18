@@ -1,6 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getOptionalSession, requireAdmin } from "@/lib/dal";
 import {
+  STUDENT_PHOTOS_BUCKET,
   removeStudentPhoto,
   StudentPhotoStorageError,
   StudentPhotoValidationError,
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
   await requireAdmin();
 
   let uploadedPath: string | null = null;
+  const adminClient = createAdminClient();
 
   try {
     const formData = await request.formData();
@@ -40,6 +42,24 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
+    const storageClient = adminClient ?? supabase;
+
+    // Self-heal storage bucket if service role key is configured
+    if (adminClient) {
+      try {
+        const { data: bucket } = await adminClient.storage.getBucket(STUDENT_PHOTOS_BUCKET);
+        if (!bucket) {
+          await adminClient.storage.createBucket(STUDENT_PHOTOS_BUCKET, {
+            public: false,
+            fileSizeLimit: 5242880,
+            allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+          });
+        }
+      } catch (bucketErr) {
+        console.warn("Storage bucket lookup/create notice:", bucketErr);
+      }
+    }
+
     const { data: student, error: studentError } = await supabase
       .from("students")
       .select("id, photo_path")
@@ -57,7 +77,7 @@ export async function POST(request: Request) {
     const oldPhotoPath = student.photo_path;
 
     // Upload new photo (upserts into storage)
-    uploadedPath = await uploadStudentPhoto(supabase, student.id, photo);
+    uploadedPath = await uploadStudentPhoto(storageClient, student.id, photo);
 
     // Save reference in the database
     const { data: updatedStudent, error: updateError } = await supabase
@@ -70,7 +90,7 @@ export async function POST(request: Request) {
     if (updateError || !updatedStudent) {
       // If DB update failed, remove newly uploaded photo
       try {
-        await removeStudentPhoto(supabase, uploadedPath);
+        await removeStudentPhoto(storageClient, uploadedPath);
       } catch (cleanupError) {
         console.error("Student photo cleanup failed:", {
           studentId: student.id,
@@ -85,7 +105,7 @@ export async function POST(request: Request) {
     // If replacement succeeded and the old path is different, clean up old storage object
     if (oldPhotoPath && oldPhotoPath !== uploadedPath) {
       try {
-        await removeStudentPhoto(supabase, oldPhotoPath);
+        await removeStudentPhoto(storageClient, oldPhotoPath);
       } catch (cleanupError) {
         console.warn("Previous student photo cleanup warning:", {
           studentId: student.id,
@@ -100,7 +120,8 @@ export async function POST(request: Request) {
     if (uploadedPath) {
       try {
         const supabase = await createClient();
-        await removeStudentPhoto(supabase, uploadedPath);
+        const storageClient = adminClient ?? supabase;
+        await removeStudentPhoto(storageClient, uploadedPath);
       } catch (cleanupError) {
         console.error("Student photo cleanup failed:", {
           path: uploadedPath,
@@ -114,7 +135,7 @@ export async function POST(request: Request) {
     }
 
     if (error instanceof StudentPhotoStorageError) {
-      return Response.json({ error: "Unable to upload the student photo. Please try again." }, { status: 502 });
+      return Response.json({ error: error.message }, { status: 502 });
     }
 
     console.error("Student photo upload failed:", {
