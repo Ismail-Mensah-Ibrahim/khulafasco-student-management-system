@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { SCHOOL } from "@/config/branding";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Loader2 } from "lucide-react";
 import { LoginForm } from "./_components/LoginForm";
 
 export const metadata: Metadata = {
@@ -36,7 +37,15 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <LoginForm />
+      <Suspense
+        fallback={
+          <div className="h-48 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        }
+      >
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }

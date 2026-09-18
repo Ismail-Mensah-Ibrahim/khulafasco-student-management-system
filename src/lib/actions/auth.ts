@@ -56,6 +56,25 @@ export async function loginAction(
   });
 
   if (error) {
+    // Record audit log for failed login attempt
+    try {
+      await supabase.rpc("create_system_audit_log", {
+        p_user_id: null,
+        p_actor_role: null,
+        p_action: "LOGIN_FAILED",
+        p_module: "AUTH",
+        p_entity_type: "auth",
+        p_entity_id: null,
+        p_target_identifier: parsed.data.email,
+        p_description: `Failed login attempt for ${parsed.data.email}: ${error.message}`,
+        p_severity: "WARNING",
+        p_status: "FAILED",
+        p_metadata: { email: parsed.data.email, error: error.message },
+      });
+    } catch (logErr) {
+      console.error("Audit log error on failed login:", logErr);
+    }
+
     // Return user-friendly messages — do not expose internal Supabase error codes
     if (error.message.toLowerCase().includes("invalid login credentials")) {
       return { error: "Invalid email or password. Please try again.", field: "general" };
@@ -77,11 +96,28 @@ export async function loginAction(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_active, role")
+    .select("is_active, role, full_name, email")
     .eq("id", user.id)
     .single();
 
   if (!profile) {
+    try {
+      await supabase.rpc("create_system_audit_log", {
+        p_user_id: user.id,
+        p_actor_role: null,
+        p_action: "LOGIN_BLOCKED",
+        p_module: "AUTH",
+        p_entity_type: "auth",
+        p_entity_id: user.id,
+        p_target_identifier: user.email,
+        p_description: `Login blocked for ${user.email}: Profile record missing`,
+        p_severity: "SECURITY",
+        p_status: "DENIED",
+      });
+    } catch (logErr) {
+      console.error("Audit log error on blocked login:", logErr);
+    }
+
     await supabase.auth.signOut();
     return {
       error: "Your account is not set up. Please contact the administrator.",
@@ -90,6 +126,23 @@ export async function loginAction(
   }
 
   if (!profile.is_active) {
+    try {
+      await supabase.rpc("create_system_audit_log", {
+        p_user_id: user.id,
+        p_actor_role: profile.role,
+        p_action: "LOGIN_BLOCKED",
+        p_module: "AUTH",
+        p_entity_type: "auth",
+        p_entity_id: user.id,
+        p_target_identifier: user.email,
+        p_description: `Login blocked for disabled staff account: ${user.email}`,
+        p_severity: "SECURITY",
+        p_status: "DENIED",
+      });
+    } catch (logErr) {
+      console.error("Audit log error on disabled account login:", logErr);
+    }
+
     await supabase.auth.signOut();
     return {
       error: "Your account has been disabled. Please contact the administrator.",
@@ -97,8 +150,30 @@ export async function loginAction(
     };
   }
 
+  // Log successful login in audit trail
+  try {
+    await supabase.rpc("create_system_audit_log", {
+      p_user_id: user.id,
+      p_actor_role: profile.role,
+      p_action: "LOGIN_SUCCESS",
+      p_module: "AUTH",
+      p_entity_type: "auth",
+      p_entity_id: user.id,
+      p_target_identifier: user.email,
+      p_description: `${profile.full_name || user.email} signed into Khulafasco SMS`,
+      p_severity: "INFO",
+      p_status: "SUCCESS",
+      p_metadata: { role: profile.role, email: user.email },
+    });
+  } catch (logErr) {
+    console.error("Audit log error on successful login:", logErr);
+  }
+
   // 4. Success — redirect by role to the correct operational dashboard
   switch (profile.role) {
+    case "house_master":
+    case "house_mistress":
+      redirect("/house/dashboard");
     case "it_officer":
       redirect("/it/dashboard");
     case "headmaster":
@@ -128,6 +203,36 @@ export async function loginAction(
  */
 export async function logoutAction(): Promise<void> {
   const supabase = await createClient();
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, full_name")
+        .eq("id", user.id)
+        .single();
+
+      await supabase.rpc("create_system_audit_log", {
+        p_user_id: user.id,
+        p_actor_role: profile?.role || "staff",
+        p_action: "LOGOUT",
+        p_module: "AUTH",
+        p_entity_type: "auth",
+        p_entity_id: user.id,
+        p_target_identifier: user.email,
+        p_description: `${profile?.full_name || user.email} signed out of Khulafasco SMS`,
+        p_severity: "INFO",
+        p_status: "SUCCESS",
+      });
+    }
+  } catch (logErr) {
+    console.error("Audit log error on logout:", logErr);
+  }
+
   await supabase.auth.signOut();
   redirect("/login");
 }

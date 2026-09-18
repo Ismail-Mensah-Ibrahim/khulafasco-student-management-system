@@ -64,6 +64,7 @@ export interface House {
 export interface Profile {
   id: string;
   full_name: string;
+  email?: string | null;
   role: UserRole;
   is_active: boolean;
   phone: string | null;
