@@ -9,7 +9,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { UserRole } from "@/config/constants";
+import type { UserRole, HouseResponsibility } from "@/config/constants";
 import type { Profile } from "@/types";
 
 export interface SessionUser {
@@ -18,6 +18,7 @@ export interface SessionUser {
   role: UserRole;
   fullName: string;
   houseId?: string | null;
+  houseResponsibility?: HouseResponsibility | null;
 }
 
 /**
@@ -41,7 +42,7 @@ export const verifySession = cache(async (): Promise<SessionUser> => {
   // Fetch the staff profile to get the application role and house affiliation
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role, full_name, is_active, house_id")
+    .select("role, full_name, is_active, house_id, house_responsibility")
     .eq("id", user.id)
     .single();
 
@@ -62,6 +63,7 @@ export const verifySession = cache(async (): Promise<SessionUser> => {
     role: profile.role as UserRole,
     fullName: profile.full_name,
     houseId: (profile as { house_id?: string | null }).house_id ?? null,
+    houseResponsibility: (profile as { house_responsibility?: HouseResponsibility | null }).house_responsibility ?? null,
   };
 });
 
@@ -81,7 +83,7 @@ export const getOptionalSession = cache(async (): Promise<SessionUser | null> =>
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, full_name, is_active, house_id")
+      .select("role, full_name, is_active, house_id, house_responsibility")
       .eq("id", user.id)
       .single();
 
@@ -93,6 +95,7 @@ export const getOptionalSession = cache(async (): Promise<SessionUser | null> =>
       role: profile.role as UserRole,
       fullName: profile.full_name,
       houseId: (profile as { house_id?: string | null }).house_id ?? null,
+      houseResponsibility: (profile as { house_responsibility?: HouseResponsibility | null }).house_responsibility ?? null,
     };
   } catch {
     return null;
@@ -161,10 +164,39 @@ export async function requireDomesticOfficer(): Promise<SessionUser> {
 }
 
 /**
- * Verify session AND require House Master, House Mistress, or Admin role.
+ * Verify session AND require House Master, House Mistress, Senior House staff, or Admin.
  */
 export async function requireHouseStaff(): Promise<SessionUser> {
-  return requireRole(["house_master", "house_mistress", "admin"]);
+  const session = await verifySession();
+  const isAllowed =
+    session.role === "admin" ||
+    session.role === "house_master" ||
+    session.role === "house_mistress" ||
+    session.houseResponsibility === "house_master" ||
+    session.houseResponsibility === "house_mistress" ||
+    session.houseResponsibility === "senior_house_master" ||
+    session.houseResponsibility === "senior_house_mistress";
+
+  if (!isAllowed) {
+    redirect("/unauthorized");
+  }
+  return session;
+}
+
+/**
+ * Verify session AND require Senior House Master, Senior House Mistress, or Admin.
+ */
+export async function requireSeniorHouseStaff(): Promise<SessionUser> {
+  const session = await verifySession();
+  const isAllowed =
+    session.role === "admin" ||
+    session.houseResponsibility === "senior_house_master" ||
+    session.houseResponsibility === "senior_house_mistress";
+
+  if (!isAllowed) {
+    redirect("/unauthorized");
+  }
+  return session;
 }
 
 /**

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/dal";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getStaffSafetyCheck } from "@/lib/data";
-import { ROLES } from "@/config/constants";
+import { ROLES, HOUSE_RESPONSIBILITIES, type HouseResponsibility } from "@/config/constants";
 import type { StaffDeletionSafety } from "@/types";
 
 function getText(formData: FormData, name: string): string {
@@ -500,16 +500,21 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
 
   const staffId = getText(formData, "staff_id");
   const newRole = getText(formData, "role");
-  const houseId = getText(formData, "house_id") || null;
+  const houseResponsibilityInput = getText(formData, "house_responsibility");
+  const houseIdInput = getText(formData, "house_id") || null;
 
   if (!staffId || !ROLES.includes(newRole as never)) {
     return { success: false, message: "Invalid staff ID or role specified." };
   }
 
+  const validResponsibility = HOUSE_RESPONSIBILITIES.includes(houseResponsibilityInput as never)
+    ? (houseResponsibilityInput as HouseResponsibility)
+    : null;
+
   // Check current profile
   const { data: currentProfile, error: fetchError } = await supabase
     .from("profiles")
-    .select("role, full_name, house_id")
+    .select("role, full_name, house_id, house_responsibility")
     .eq("id", staffId)
     .single();
 
@@ -518,16 +523,33 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
   }
 
   const oldRole = currentProfile.role;
+  const oldResponsibility = (currentProfile as { house_responsibility?: string | null }).house_responsibility;
+  const oldHouseId = currentProfile.house_id;
 
-  // Direct update with house_id support
-  const updatePayload: { role: (typeof ROLES)[number]; updated_at: string; house_id?: string | null } = {
+  // Determine final house_id based on responsibility
+  let finalHouseId: string | null = null;
+  if (validResponsibility === "house_master" || validResponsibility === "house_mistress" || newRole === "house_master" || newRole === "house_mistress") {
+    finalHouseId = houseIdInput;
+    if (!finalHouseId) {
+      return { success: false, message: "Please select a residential house for the House Master/Mistress responsibility." };
+    }
+  } else if (validResponsibility === "senior_house_master" || validResponsibility === "senior_house_mistress") {
+    // Senior house staff have school-wide oversight of all houses
+    finalHouseId = null;
+  }
+
+  // Update profile
+  const updatePayload: {
+    role: (typeof ROLES)[number];
+    house_responsibility: HouseResponsibility | null;
+    house_id: string | null;
+    updated_at: string;
+  } = {
     role: newRole as (typeof ROLES)[number],
+    house_responsibility: validResponsibility,
+    house_id: finalHouseId,
     updated_at: new Date().toISOString(),
   };
-
-  if (houseId !== null) {
-    updatePayload.house_id = houseId || null;
-  }
 
   const { error: updateError } = await supabase
     .from("profiles")
@@ -536,15 +558,33 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
 
   if (updateError) {
     console.error("updateStaffRoleAction update error:", updateError);
-    return { success: false, message: "Failed to update staff role." };
+    return { success: false, message: "Failed to update staff role and house assignment." };
   }
 
-  // If assigned to a house, update houses table leadership reference
-  if (houseId && (newRole === "house_master" || newRole === "house_mistress")) {
-    const houseField = newRole === "house_master" ? "house_master_id" : "house_mistress_id";
-    await supabase.from("houses").update({ [houseField]: staffId }).eq("id", houseId);
+  // Manage house leadership in houses table
+  // 1. Clear previous leadership if this staff was assigned to an old house
+  if (oldHouseId && oldHouseId !== finalHouseId) {
+    await supabase
+      .from("houses")
+      .update({ house_master_id: null })
+      .eq("id", oldHouseId)
+      .eq("house_master_id", staffId);
+
+    await supabase
+      .from("houses")
+      .update({ house_mistress_id: null })
+      .eq("id", oldHouseId)
+      .eq("house_mistress_id", staffId);
   }
 
+  // 2. Set new leadership if assigned to a specific house
+  if (finalHouseId && (validResponsibility === "house_master" || validResponsibility === "house_mistress" || newRole === "house_master" || newRole === "house_mistress")) {
+    const isMaster = validResponsibility === "house_master" || newRole === "house_master";
+    const houseField = isMaster ? "house_master_id" : "house_mistress_id";
+    await supabase.from("houses").update({ [houseField]: staffId }).eq("id", finalHouseId);
+  }
+
+  // Audit logging
   await supabase.from("audit_logs").insert({
     user_id: session.id,
     actor_role: session.role,
@@ -553,23 +593,26 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
     entity_id: staffId,
     module: "STAFF",
     target_identifier: staffId,
-    description: `Role for ${currentProfile.full_name || "Staff"} changed from ${oldRole} to ${newRole}`,
+    description: `Staff ${currentProfile.full_name || "Account"} updated: Role=${newRole}, House Responsibility=${validResponsibility || "none"}, House=${finalHouseId || "all/none"}`,
     severity: "SECURITY",
     status: "SUCCESS",
-    before_data: { role: oldRole },
-    after_data: { role: newRole, house_id: houseId },
+    before_data: { role: oldRole, house_responsibility: oldResponsibility, house_id: oldHouseId },
+    after_data: { role: newRole, house_responsibility: validResponsibility, house_id: finalHouseId },
   });
 
   revalidatePath("/admin/staff");
   revalidatePath("/admin/audit-logs");
   revalidatePath("/admin/houses");
   revalidatePath("/house/dashboard");
+  revalidatePath("/house/students");
+  revalidatePath("/house/exeats");
   revalidatePath("/it/dashboard");
   revalidatePath("/it/audit");
 
+  const respLabel = validResponsibility ? ` with ${validResponsibility.replace(/_/g, " ").toUpperCase()} responsibility` : "";
   return {
     success: true,
-    message: `Role for ${currentProfile.full_name} updated to ${newRole.replace("_", " ").toUpperCase()}.`,
+    message: `Role for ${currentProfile.full_name} updated to ${newRole.replace(/_/g, " ").toUpperCase()}${respLabel}.`,
   };
 }
 

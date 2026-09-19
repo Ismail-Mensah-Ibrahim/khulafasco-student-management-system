@@ -26,6 +26,8 @@ import type {
   RequestType,
   ResultStatus,
   UserRole,
+  HouseResponsibility,
+  TimetableDay,
 } from "@/config/constants";
 
 // ---------------------------------------------------------------------------
@@ -69,6 +71,7 @@ export interface Profile {
   is_active: boolean;
   phone: string | null;
   house_id?: string | null;
+  house_responsibility?: HouseResponsibility | null;
   house?: House | null;
   created_at: string;
   updated_at: string;
@@ -341,6 +344,8 @@ export interface Subject {
   code: string;
   department: string | null;
   is_elective: boolean;
+  is_active?: boolean;
+  description?: string | null;
   created_at: string;
 }
 
@@ -350,10 +355,35 @@ export interface TeacherAssignment {
   class_id: string;
   subject_id: string;
   academic_year_id: string;
+  semester_id?: string | null;
   created_at: string;
   class?: SchoolClass;
   subject?: Subject;
   teacher?: Profile;
+  semester?: Semester;
+}
+
+export interface TimetableEntry {
+  id: string;
+  class_id: string;
+  subject_id: string;
+  teacher_id: string | null;
+  academic_year_id: string;
+  semester_id: string | null;
+  day_of_week: TimetableDay;
+  period_number: number;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+  stream: string | null;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+  class?: SchoolClass;
+  subject?: Subject;
+  teacher?: Profile;
+  academic_year?: AcademicYear;
+  semester?: Semester;
 }
 
 export interface StudentClassAssignment {

@@ -12,13 +12,14 @@ import { SCHOOL } from "@/config/branding";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-import { UserRole, ROLE_LABELS } from "@/config/constants";
+import { UserRole, ROLE_LABELS, type HouseResponsibility } from "@/config/constants";
 import { getNavItemsForRole, type NavItem } from "@/components/layout/nav-items";
 
 interface SidebarProps {
   userRole?: UserRole;
   userName?: string;
   userEmail?: string;
+  houseResponsibility?: HouseResponsibility | null;
 }
 
 /**
@@ -29,11 +30,12 @@ export function Sidebar({
   userRole = "admin",
   userName = "Staff User",
   userEmail = "",
+  houseResponsibility,
 }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
-  const visibleItems = getNavItemsForRole(userRole);
+  const visibleItems = getNavItemsForRole(userRole, houseResponsibility);
 
   // Group by section
   const sections: string[] = [];

@@ -7,12 +7,13 @@ import { LogoutButton } from "@/components/auth/LogoutButton";
 import { getInitials } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 
-import { UserRole, ROLE_LABELS } from "@/config/constants";
+import { UserRole, ROLE_LABELS, type HouseResponsibility } from "@/config/constants";
 
 interface TopBarProps {
   userRole?: UserRole;
   userName?: string;
   userEmail?: string;
+  houseResponsibility?: HouseResponsibility | null;
   pageTitle?: string;
 }
 
@@ -24,6 +25,7 @@ export function TopBar({
   userRole = "admin",
   userName = "Staff User",
   userEmail = "",
+  houseResponsibility,
   pageTitle,
 }: TopBarProps) {
   const initials = getInitials(userName);
@@ -52,7 +54,11 @@ export function TopBar({
     >
       {/* Mobile: hamburger + logo */}
       <div className="flex items-center gap-3 md:hidden">
-        <MobileSidebar userRole={userRole} userName={userName} />
+        <MobileSidebar
+          userRole={userRole}
+          userName={userName}
+          houseResponsibility={houseResponsibility}
+        />
         <SchoolLogo size="sm" showName />
       </div>
 
