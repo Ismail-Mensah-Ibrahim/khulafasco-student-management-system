@@ -208,12 +208,12 @@ export default function TimetableManager({
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {hasUnpublished && filteredEntries.length > 0 && (
-            <Button onClick={() => handlePublish(true)} disabled={isPending} variant="default" size="sm">
+            <Button onClick={() => handlePublish(true)} loading={isPending} loadingText="Publishing..." variant="default" size="sm">
               <Send className="size-4 mr-1" /> Publish Timetable
             </Button>
           )}
           {isPublished && (
-            <Button onClick={() => handlePublish(false)} disabled={isPending} variant="outline" size="sm">
+            <Button onClick={() => handlePublish(false)} loading={isPending} loadingText="Unpublishing..." variant="outline" size="sm">
               <EyeOff className="size-4 mr-1" /> Unpublish
             </Button>
           )}

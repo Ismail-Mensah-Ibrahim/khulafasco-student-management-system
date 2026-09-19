@@ -52,7 +52,7 @@ export default async function HeadmasterDashboardPage() {
             Welcome, <strong>{session.fullName}</strong>. Institutional metrics, financial health, and governance approvals.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button render={<Link href="/requests" />} variant="default" size="sm">
             <FileText className="size-4 mr-1" /> Review Requests ({allActionableRequests.length})
           </Button>
@@ -61,6 +61,7 @@ export default async function HeadmasterDashboardPage() {
           </Button>
         </div>
       </div>
+
 
       {/* Primary Institutional KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

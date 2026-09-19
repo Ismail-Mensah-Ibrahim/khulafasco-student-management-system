@@ -514,8 +514,8 @@ export function StudentPromotionClient({
             <Button variant="outline" size="sm" onClick={() => setIsConfirmOpen(false)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleExecutePromotion} disabled={isPending}>
-              {isPending ? "Promoting..." : "Confirm & Execute Promotion"}
+            <Button size="sm" onClick={handleExecutePromotion} loading={isPending} loadingText="Promoting...">
+              Confirm &amp; Execute Promotion
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -771,10 +771,12 @@ export function ClassesClient({
             </Button>
             <Button
               size="sm"
+              loading={isPending}
+              loadingText="Saving..."
               disabled={isPending || !subjectName.trim() || !subjectCode.trim()}
               onClick={handleSaveSubject}
             >
-              {isPending ? "Saving..." : editingSubject ? "Save Changes" : "Create Subject"}
+              {editingSubject ? "Save Changes" : "Create Subject"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -893,10 +895,12 @@ export function ClassesClient({
             </Button>
             <Button
               size="sm"
+              loading={isPending}
+              loadingText="Assigning..."
               disabled={isPending || !assignTeacherId || !assignClassId || !assignSubjectId || !assignYearId}
               onClick={handleSaveAssignment}
             >
-              {isPending ? "Assigning..." : "Confirm Allocation"}
+              Confirm Allocation
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1024,10 +1028,12 @@ export function ClassesClient({
             </Button>
             <Button
               size="sm"
+              loading={isPending}
+              loadingText="Saving..."
               disabled={isPending || !className.trim() || !classFormLevel || !classYearId}
               onClick={handleSaveClass}
             >
-              {isPending ? "Saving..." : editingClass ? "Update Class" : "Create Class"}
+              {editingClass ? "Update Class" : "Create Class"}
             </Button>
           </DialogFooter>
         </DialogContent>

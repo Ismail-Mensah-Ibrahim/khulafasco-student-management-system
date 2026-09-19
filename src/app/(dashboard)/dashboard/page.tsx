@@ -517,29 +517,30 @@ interface StatCardProps {
 function StatCard({ label, value, icon: Icon, color, bg, prefix }: StatCardProps) {
   return (
     <div
-      className="rounded-xl p-4 flex flex-col gap-3"
+      className="rounded-xl p-3.5 sm:p-4 flex flex-col gap-2.5 sm:gap-3 min-w-0"
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
         boxShadow: "var(--shadow-sm)",
       }}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <span className="text-xs font-medium truncate" style={{ color: "var(--muted-foreground)" }}>
           {label}
         </span>
         <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center"
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
           style={{ background: bg }}
         >
           <Icon className="w-4 h-4" style={{ color }} />
         </div>
       </div>
-      <div>
-        <p className="text-2xl font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
+      <div className="min-w-0">
+        <p className="text-lg sm:text-2xl font-bold tabular-nums truncate" style={{ color: "var(--foreground)" }}>
           {prefix && value !== "—" ? prefix : ""}{value}
         </p>
       </div>
     </div>
   );
 }
+

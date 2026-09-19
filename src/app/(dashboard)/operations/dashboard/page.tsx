@@ -44,7 +44,7 @@ export default async function OperationsDashboardPage() {
             Logged in as <strong>{session.fullName}</strong>. Food supplies, facility maintenance, sanitation, and vehicle logistics.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button render={<Link href="/requests/new" />} variant="default" size="sm">
             <PlusCircle className="size-4 mr-1" /> New Requisition
           </Button>
@@ -53,6 +53,7 @@ export default async function OperationsDashboardPage() {
           </Button>
         </div>
       </div>
+
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

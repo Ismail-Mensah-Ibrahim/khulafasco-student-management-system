@@ -654,6 +654,8 @@ export function StaffManagementClient({
             <Button
               size="sm"
               onClick={handleSaveRole}
+              loading={isPending}
+              loadingText="Updating Role..."
               disabled={
                 isPending ||
                 (newRole === roleModalStaff?.role &&
@@ -661,7 +663,7 @@ export function StaffManagementClient({
                   selectedHouseId === (roleModalStaff?.house_id || ""))
               }
             >
-              {isPending ? "Updating Role..." : "Confirm Role Change"}
+              Confirm Role Change
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -725,8 +727,8 @@ export function StaffManagementClient({
             <Button variant="outline" size="sm" onClick={() => setEditModalStaff(null)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleSaveProfile} disabled={isPending || !editFullName.trim()}>
-              {isPending ? "Saving..." : "Save Profile"}
+            <Button size="sm" onClick={handleSaveProfile} loading={isPending} loadingText="Saving..." disabled={isPending || !editFullName.trim()}>
+              Save Profile
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -820,9 +822,11 @@ export function StaffManagementClient({
                 variant="destructive"
                 size="sm"
                 onClick={handleConfirmDelete}
+                loading={isPending}
+                loadingText="Deleting..."
                 disabled={isPending || deleteConfirmText !== "DELETE" || checkingSafety}
               >
-                {isPending ? "Deleting..." : "Permanently Delete"}
+                Permanently Delete
               </Button>
             )}
           </DialogFooter>

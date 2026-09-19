@@ -52,7 +52,7 @@ export default async function ITDashboardPage() {
             Logged in as <strong>{session.fullName}</strong>. System status, ticketing triage, and account management.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button render={<Link href="/it/audit" />} variant="outline" size="sm">
             <ShieldAlert className="size-4 mr-1 text-primary" /> Security & Audit Center
           </Button>
@@ -64,6 +64,7 @@ export default async function ITDashboardPage() {
           </Button>
         </div>
       </div>
+
 
       {/* Operational & Security Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
