@@ -8,6 +8,7 @@ import {
   getStaffProfiles,
   getAcademicYears,
   getSemesters,
+  getPrograms,
 } from "@/lib/data";
 import { ClassesClient } from "./_components/ClassesClient";
 
@@ -18,13 +19,14 @@ export const metadata: Metadata = {
 export default async function AcademicClassesPage() {
   await requireAcademicOrAdmin();
 
-  const [classes, subjects, assignments, staff, academicYears, semesters] = await Promise.all([
+  const [classes, subjects, assignments, staff, academicYears, semesters, programs] = await Promise.all([
     getClasses(),
     getSubjects(),
     getTeacherAssignments(),
     getStaffProfiles(),
     getAcademicYears(),
     getSemesters(),
+    getPrograms(),
   ]);
 
   const teachers = staff.filter((s) => s.role === "teacher" || s.role === "academic_head" || s.is_active);
@@ -47,6 +49,7 @@ export default async function AcademicClassesPage() {
         teachers={teachers}
         academicYears={academicYears}
         semesters={semesters}
+        programs={programs}
       />
     </div>
   );

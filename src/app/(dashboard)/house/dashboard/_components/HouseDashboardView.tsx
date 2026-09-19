@@ -98,7 +98,7 @@ export function HouseDashboardView({
             <p className="text-sm text-amber-800 max-w-md mx-auto">
               Your profile has not yet been linked to a specific residential house (Abubakar, Ali, Umar, or Uthman). Please notify the System Administrator or Headmaster to assign your residential house affiliation.
             </p>
-            {userRole === "admin" && allHouses.length > 0 && (
+            {allHouses.length > 0 && (
               <div className="pt-4 flex flex-wrap justify-center gap-2">
                 <span className="text-xs text-muted-foreground self-center mr-2">Admin View House:</span>
                 {allHouses.map((h) => (
@@ -120,7 +120,7 @@ export function HouseDashboardView({
 
   return (
     <div className="space-y-6">
-      {/* Header with Admin House Switcher if Admin */}
+      {/* Header with House Switcher for Admin + Senior House Staff */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
@@ -136,10 +136,20 @@ export function HouseDashboardView({
           </p>
         </div>
 
-        {userRole === "admin" && allHouses.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground font-medium">Switch House:</span>
-            <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-lg border border-border">
+        {allHouses.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground font-medium">Scope:</span>
+            <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-lg border border-border flex-wrap">
+              <Link
+                href="/house/dashboard?houseId=all"
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                  house.id === "all"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                All Houses (School-Wide)
+              </Link>
               {allHouses.map((h) => {
                 const isActive = h.id === house.id;
                 return (
@@ -160,6 +170,7 @@ export function HouseDashboardView({
           </div>
         )}
       </div>
+
 
       {feedback && (
         <div

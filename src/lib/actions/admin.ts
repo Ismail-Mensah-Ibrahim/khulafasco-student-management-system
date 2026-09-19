@@ -998,3 +998,77 @@ export async function checkStaffSafetyAction(staffId: string): Promise<StaffDele
   await requireAdmin();
   return await getStaffSafetyCheck(staffId);
 }
+
+export async function updateStaffEmailAction(formData: FormData): Promise<StaffActionResult> {
+  const session = await requireAdmin();
+
+  const staffId = getText(formData, "staff_id");
+  const newEmail = getText(formData, "email").toLowerCase().trim();
+
+  if (!staffId) return { success: false, message: "Staff ID is required." };
+  if (!newEmail || !newEmail.includes("@")) {
+    return { success: false, message: "A valid email address is required." };
+  }
+
+  // Check email not already taken by another user
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", newEmail)
+    .neq("id", staffId)
+    .maybeSingle();
+
+  if (existing) {
+    return { success: false, message: "This email address is already assigned to another staff account." };
+  }
+
+  // Use admin client to update auth.users email (bypasses confirmation for admin-initiated change)
+  const adminClient = createAdminClient();
+  if (!adminClient) {
+    return {
+      success: false,
+      message:
+        "Server administration configuration error: SUPABASE_SERVICE_ROLE_KEY is required to update authentication email.",
+    };
+  }
+
+  const { error: authError } = await adminClient.auth.admin.updateUserById(staffId, {
+    email: newEmail,
+    email_confirm: true, // admin-initiated, no confirmation required
+  });
+
+  if (authError) {
+    console.error("updateStaffEmailAction auth error:", authError);
+    return { success: false, message: "Failed to update email in authentication system: " + authError.message };
+  }
+
+  // Update profiles table
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ email: newEmail, updated_at: new Date().toISOString() })
+    .eq("id", staffId);
+
+  if (profileError) {
+    console.error("updateStaffEmailAction profile error:", profileError);
+    // Auth was updated — log the partial failure
+    return { success: false, message: "Email updated in auth but profile sync failed: " + profileError.message };
+  }
+
+  await supabase.from("audit_logs").insert({
+    user_id: session.id,
+    actor_role: session.role,
+    action: "STAFF_EMAIL_UPDATED",
+    module: "STAFF",
+    entity_type: "profiles",
+    entity_id: staffId,
+    target_identifier: staffId,
+    description: `Admin updated staff email to ${newEmail}`,
+    severity: "SECURITY",
+    status: "SUCCESS",
+    after_data: { email: newEmail },
+  });
+
+  revalidatePath("/admin/staff");
+  return { success: true, message: `Email successfully updated to ${newEmail}.` };
+}

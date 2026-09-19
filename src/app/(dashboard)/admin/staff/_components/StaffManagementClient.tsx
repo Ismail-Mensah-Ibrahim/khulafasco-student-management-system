@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   XCircle,
   Phone,
+  Mail,
 } from "lucide-react";
 import {
   ROLE_LABELS,
@@ -32,6 +33,7 @@ import {
   toggleStaffActiveAction,
   safeDeleteStaffAction,
   updateStaffProfileAction,
+  updateStaffEmailAction,
   initiateStaffPasswordResetAction,
   checkStaffSafetyAction,
 } from "@/lib/actions/admin";
@@ -84,6 +86,7 @@ export function StaffManagementClient({
   const [editModalStaff, setEditModalStaff] = useState<Profile | null>(null);
   const [editFullName, setEditFullName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
 
   const [deleteModalStaff, setDeleteModalStaff] = useState<Profile | null>(null);
   const [safetyCheck, setSafetyCheck] = useState<StaffDeletionSafety | null>(null);
@@ -94,6 +97,7 @@ export function StaffManagementClient({
   const filteredStaff = staffList.filter((staff) => {
     const matchesSearch =
       staff.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      (staff.email && staff.email.toLowerCase().includes(search.toLowerCase())) ||
       (staff.phone && staff.phone.includes(search));
 
     const matchesRole = selectedRole === "all" || staff.role === selectedRole;
@@ -182,33 +186,57 @@ export function StaffManagementClient({
     setEditModalStaff(staff);
     setEditFullName(staff.full_name);
     setEditPhone(staff.phone || "");
+    setEditEmail(staff.email || "");
     setFeedback(null);
   }
 
   function handleSaveProfile() {
     if (!editModalStaff) return;
     const targetStaff = editModalStaff;
+    const emailChanged = editEmail.trim().toLowerCase() !== (targetStaff.email || "").toLowerCase();
+
     startTransition(async () => {
+      // 1. Update name + phone
       const formData = new FormData();
       formData.set("staff_id", targetStaff.id);
       formData.set("full_name", editFullName);
       formData.set("phone", editPhone);
 
       const result = await updateStaffProfileAction(formData);
-      if (result.success) {
-        setFeedback({ type: "success", message: result.message });
-        setStaffList((prev) =>
-          prev.map((s) =>
-            s.id === targetStaff.id
-              ? { ...s, full_name: editFullName, phone: editPhone || null }
-              : s
-          )
-        );
-        setEditModalStaff(null);
-        router.refresh();
-      } else {
+      if (!result.success) {
         setFeedback({ type: "error", message: result.message });
+        return;
       }
+
+      // 2. Update email separately if changed
+      if (emailChanged && editEmail.trim()) {
+        const emailFormData = new FormData();
+        emailFormData.set("staff_id", targetStaff.id);
+        emailFormData.set("email", editEmail.trim());
+        const emailResult = await updateStaffEmailAction(emailFormData);
+        if (!emailResult.success) {
+          setFeedback({ type: "error", message: "Profile saved, but email update failed: " + emailResult.message });
+          setStaffList((prev) =>
+            prev.map((s) =>
+              s.id === targetStaff.id ? { ...s, full_name: editFullName, phone: editPhone || null } : s
+            )
+          );
+          setEditModalStaff(null);
+          router.refresh();
+          return;
+        }
+      }
+
+      setFeedback({ type: "success", message: emailChanged ? "Profile and email updated successfully." : result.message });
+      setStaffList((prev) =>
+        prev.map((s) =>
+          s.id === targetStaff.id
+            ? { ...s, full_name: editFullName, phone: editPhone || null, email: editEmail || s.email }
+            : s
+        )
+      );
+      setEditModalStaff(null);
+      router.refresh();
     });
   }
 
@@ -323,7 +351,7 @@ export function StaffManagementClient({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search staff by name or phone..."
+              placeholder="Search staff by name, email, or phone..."
               className="pl-9 text-sm"
             />
           </div>
@@ -398,6 +426,11 @@ export function StaffManagementClient({
                               </Badge>
                             )}
                           </div>
+                          {staff.email && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Mail className="size-3 text-primary/70" /> {staff.email}
+                            </p>
+                          )}
                           {staff.phone && (
                             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                               <Phone className="size-3" /> {staff.phone}
@@ -405,6 +438,7 @@ export function StaffManagementClient({
                           )}
                         </div>
                       </td>
+
                       <td className="px-4 py-3.5">
                         <div className="flex flex-col gap-1 items-start">
                           <Badge variant="outline" className="text-xs font-semibold">
@@ -641,7 +675,7 @@ export function StaffManagementClient({
               <Edit2 className="size-5 text-primary" /> Edit Staff Profile
             </DialogTitle>
             <DialogDescription>
-              Update staff full name and phone contact information.
+              Update staff name, phone, and email address. Email changes update the login credential immediately.
             </DialogDescription>
           </DialogHeader>
 
@@ -655,6 +689,24 @@ export function StaffManagementClient({
                 onChange={(e) => setEditFullName(e.target.value)}
                 placeholder="e.g. Ibrahim Mensah"
               />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Email Address <span className="text-primary">(Login Credential)</span>
+              </label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="e.g. staff@khulafasco.edu.gh"
+              />
+              {editEmail.trim().toLowerCase() !== (editModalStaff?.email || "").toLowerCase() && editEmail.trim() && (
+                <p className="text-xs text-amber-700 mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3 shrink-0" />
+                  Email will be updated in the authentication system. Inform the staff member of their new login email.
+                </p>
+              )}
             </div>
 
             <div>
@@ -679,6 +731,7 @@ export function StaffManagementClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* 3. SAFE PERMANENT DELETION DIALOG */}
       <Dialog open={!!deleteModalStaff} onOpenChange={(open) => !open && setDeleteModalStaff(null)}>
