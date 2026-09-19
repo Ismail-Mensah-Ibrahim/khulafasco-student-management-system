@@ -221,8 +221,8 @@ export function TeacherResultsClient({
                 </p>
               )}
 
-              <Button type="submit" disabled={isPending} className="w-full">
-                {isPending ? "Submitting..." : "Submit for Head Review"}
+              <Button type="submit" loading={isPending} loadingText="Submitting..." className="w-full">
+                Submit for Head Review
               </Button>
             </form>
           </CardContent>

@@ -420,8 +420,8 @@ export function SemestersManagementClient({
             <Button variant="outline" size="sm" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleCreate} disabled={isPending || !createName.trim()}>
-              {isPending ? "Creating..." : "Save Semester"}
+            <Button size="sm" onClick={handleCreate} loading={isPending} loadingText="Creating..." disabled={isPending || !createName.trim()}>
+              Save Semester
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -478,8 +478,8 @@ export function SemestersManagementClient({
             <Button variant="outline" size="sm" onClick={() => setEditModalSemester(null)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleUpdate} disabled={isPending}>
-              {isPending ? "Saving..." : "Save Changes"}
+            <Button size="sm" onClick={handleUpdate} loading={isPending} loadingText="Saving...">
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -501,8 +501,8 @@ export function SemestersManagementClient({
             <Button variant="outline" size="sm" onClick={() => setDeleteModalSemester(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isPending}>
-              {isPending ? "Deleting..." : "Confirm Delete"}
+            <Button variant="destructive" size="sm" onClick={handleDelete} loading={isPending} loadingText="Deleting...">
+              Confirm Delete
             </Button>
           </DialogFooter>
         </DialogContent>

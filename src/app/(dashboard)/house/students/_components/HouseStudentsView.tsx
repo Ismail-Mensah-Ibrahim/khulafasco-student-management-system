@@ -15,15 +15,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StudentAvatar } from "@/components/shared/StudentAvatar";
 import type { HouseDashboardData } from "@/lib/data";
+import type { House } from "@/types";
 
 interface HouseStudentsViewProps {
   data: HouseDashboardData;
   userRole?: string;
   userFullName?: string;
+  allHouses?: House[];
+  selectedHouseId?: string;
 }
 
 export function HouseStudentsView({
   data,
+  allHouses = [],
 }: HouseStudentsViewProps) {
   const { house, isAssigned, students } = data;
 
@@ -138,6 +142,41 @@ export function HouseStudentsView({
         </div>
       </div>
 
+      {/* Scope Switcher for Senior House Staff & Admin */}
+      {allHouses.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground font-medium">Scope:</span>
+          <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-lg border border-border flex-wrap">
+            <Link
+              href="/house/students?houseId=all"
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                house.id === "all"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All Houses (School-Wide)
+            </Link>
+            {allHouses.map((h) => {
+              const isActive = h.id === house.id;
+              return (
+                <Link
+                  key={h.id}
+                  href={`/house/students?houseId=${h.id}`}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {h.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Main Roster Card */}
       <Card className="border-border shadow-xs">
         <CardHeader className="pb-3 border-b border-border">
@@ -220,6 +259,7 @@ export function HouseStudentsView({
                 <tr>
                   <th className="px-4 py-3">Student</th>
                   <th className="px-4 py-3">JHS Index Number</th>
+                  {house.id === "all" && <th className="px-4 py-3">House</th>}
                   <th className="px-4 py-3">Gender</th>
                   <th className="px-4 py-3">Program</th>
                   <th className="px-4 py-3">Residential Type</th>
@@ -230,7 +270,7 @@ export function HouseStudentsView({
               <tbody className="divide-y divide-border">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={house.id === "all" ? 8 : 7} className="px-4 py-8 text-center text-muted-foreground">
                       No students found matching this criteria.
                     </td>
                   </tr>
@@ -252,6 +292,13 @@ export function HouseStudentsView({
                       <td className="px-4 py-3 font-mono font-medium text-foreground">
                         {student.jhsIndexNumber}
                       </td>
+                      {house.id === "all" && (
+                        <td className="px-4 py-3">
+                          <Badge variant="secondary" className="text-[10px] font-medium">
+                            {student.houseName || "House"}
+                          </Badge>
+                        </td>
+                      )}
                       <td className="px-4 py-3">
                         {student.gender === "male" ? (
                           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">

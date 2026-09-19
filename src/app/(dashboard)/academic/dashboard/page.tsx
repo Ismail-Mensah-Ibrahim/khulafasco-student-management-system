@@ -45,7 +45,7 @@ export default async function AcademicDashboardPage() {
             Logged in as <strong>{session.fullName}</strong>. Curriculum supervision, class allocation, and terminal result verification.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button render={<Link href="/academic/results" />} variant="default" size="sm">
             <FileSpreadsheet className="size-4 mr-1" /> Pending Results ({pendingResults.length})
           </Button>

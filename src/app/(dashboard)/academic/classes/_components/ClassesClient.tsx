@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { SchoolClass, Subject, TeacherAssignment, Profile, AcademicYear, Semester } from "@/types";
+import type { SchoolClass, Subject, TeacherAssignment, Profile, AcademicYear, Semester, Program } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,8 @@ import {
   assignTeacherAction,
   removeTeacherAssignmentAction,
 } from "@/lib/actions/academics";
+import { createClassAction, updateClassAction } from "@/lib/actions/academic-lifecycle";
+import { FORM_LEVELS } from "@/config/constants";
 
 interface ClassesClientProps {
   classes: SchoolClass[];
@@ -44,6 +46,7 @@ interface ClassesClientProps {
   teachers?: Profile[];
   academicYears?: AcademicYear[];
   semesters?: Semester[];
+  programs?: Program[];
 }
 
 export function ClassesClient({
@@ -53,6 +56,7 @@ export function ClassesClient({
   teachers = [],
   academicYears = [],
   semesters = [],
+  programs = [],
 }: ClassesClientProps) {
   const router = useRouter();
   const [tab, setTab] = useState<"classes" | "assignments" | "subjects">("assignments");
@@ -81,6 +85,19 @@ export function ClassesClient({
     semesters.find((s) => s.is_current)?.id || semesters[0]?.id || ""
   );
 
+  // Class Create/Edit Modal states
+  const [classModalOpen, setClassModalOpen] = useState(false);
+  const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
+  const [className, setClassName] = useState("");
+  const [classFormLevel, setClassFormLevel] = useState<string>(FORM_LEVELS[0]);
+  const [classStream, setClassStream] = useState("");
+  const [classProgramId, setClassProgramId] = useState("");
+  const [classYearId, setClassYearId] = useState(
+    academicYears.find((y) => y.is_current)?.id || academicYears[0]?.id || ""
+  );
+  const [classTeacherId, setClassTeacherId] = useState("");
+  const [classCapacity, setClassCapacity] = useState("50");
+
   // Filtered datasets
   const filteredClasses = classes.filter(
     (c) =>
@@ -103,6 +120,64 @@ export function ClassesClient({
     const q = search.toLowerCase();
     return teacherName.includes(q) || className.includes(q) || subjectName.includes(q);
   });
+
+  // Handlers for Class Management
+  function handleOpenCreateClass() {
+    setEditingClass(null);
+    setClassName("");
+    setClassFormLevel(FORM_LEVELS[0]);
+    setClassStream("");
+    setClassProgramId("");
+    setClassYearId(academicYears.find((y) => y.is_current)?.id || academicYears[0]?.id || "");
+    setClassTeacherId("");
+    setClassCapacity("50");
+    setClassModalOpen(true);
+    setFeedback(null);
+  }
+
+  function handleOpenEditClass(cls: SchoolClass) {
+    setEditingClass(cls);
+    setClassName(cls.name);
+    setClassFormLevel(cls.form_level || FORM_LEVELS[0]);
+    setClassStream(cls.stream || "");
+    setClassProgramId(cls.program_id || "");
+    setClassYearId(cls.academic_year_id || "");
+    setClassTeacherId(cls.class_teacher_id || "");
+    setClassCapacity(String(cls.capacity || 50));
+    setClassModalOpen(true);
+    setFeedback(null);
+  }
+
+  function handleSaveClass() {
+    if (!className.trim() || !classFormLevel || !classYearId) return;
+
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("name", className.trim());
+      formData.set("form_level", classFormLevel);
+      formData.set("stream", classStream.trim());
+      formData.set("program_id", classProgramId);
+      formData.set("academic_year_id", classYearId);
+      formData.set("class_teacher_id", classTeacherId);
+      formData.set("capacity", classCapacity);
+
+      let res;
+      if (editingClass) {
+        formData.set("class_id", editingClass.id);
+        res = await updateClassAction(formData);
+      } else {
+        res = await createClassAction(formData);
+      }
+
+      if (res.success) {
+        setFeedback({ type: "success", message: res.message });
+        setClassModalOpen(false);
+        router.refresh();
+      } else {
+        setFeedback({ type: "error", message: res.message });
+      }
+    });
+  }
 
   // Handlers for Subject Management
   function handleOpenCreateSubject() {
@@ -311,6 +386,12 @@ export function ClassesClient({
             </Button>
           )}
 
+          {tab === "classes" && (
+            <Button size="sm" onClick={handleOpenCreateClass} className="shrink-0 text-xs">
+              <Plus className="size-3.5 mr-1" /> Add Class
+            </Button>
+          )}
+
           {tab === "subjects" && (
             <Button size="sm" onClick={handleOpenCreateSubject} className="shrink-0 text-xs">
               <Plus className="size-3.5 mr-1" /> Add Subject
@@ -423,16 +504,31 @@ export function ClassesClient({
       {/* 2. CLASSES ROSTER TAB */}
       {tab === "classes" && (
         <Card className="shadow-xs border-border">
-          <CardHeader className="pb-3 border-b border-border/50">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <GraduationCap className="size-4 text-primary" />
-              School Forms &amp; Classes Roster
-            </CardTitle>
+          <CardHeader className="pb-3 border-b border-border/50 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <GraduationCap className="size-4 text-primary" />
+                School Forms &amp; Classes Roster
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Create and manage academic class streams for the current year.
+              </p>
+            </div>
+            <Button size="xs" onClick={handleOpenCreateClass}>
+              <Plus className="size-3 mr-1" /> Add Class
+            </Button>
           </CardHeader>
           <CardContent className="pt-4">
             {filteredClasses.length === 0 ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                No classes match the filter criteria.
+              <div className="py-12 text-center">
+                <GraduationCap className="size-10 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-sm font-medium text-foreground">No classes registered yet</p>
+                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                  Create class streams for the current academic year to allow teacher assignments and timetabling.
+                </p>
+                <Button size="sm" onClick={handleOpenCreateClass} className="mt-4">
+                  <Plus className="size-3.5 mr-1" /> Create First Class
+                </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -440,9 +536,20 @@ export function ClassesClient({
                   <div key={cls.id} className="p-4 rounded-xl border border-border bg-card shadow-xs space-y-2">
                     <div className="flex items-center justify-between">
                       <h3 className="font-bold text-sm text-foreground">{cls.name}</h3>
-                      <Badge variant="outline" className="text-xs">
-                        {cls.form_level}
-                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="text-xs">
+                          {cls.form_level}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => handleOpenEditClass(cls)}
+                          className="text-primary h-6 w-6 p-0"
+                          title="Edit class"
+                        >
+                          <Edit2 className="size-3" />
+                        </Button>
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Program: <strong className="text-foreground">{cls.program?.name ?? "General Stream"}</strong>
@@ -664,10 +771,12 @@ export function ClassesClient({
             </Button>
             <Button
               size="sm"
+              loading={isPending}
+              loadingText="Saving..."
               disabled={isPending || !subjectName.trim() || !subjectCode.trim()}
               onClick={handleSaveSubject}
             >
-              {isPending ? "Saving..." : editingSubject ? "Save Changes" : "Create Subject"}
+              {editingSubject ? "Save Changes" : "Create Subject"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -786,10 +895,145 @@ export function ClassesClient({
             </Button>
             <Button
               size="sm"
+              loading={isPending}
+              loadingText="Assigning..."
               disabled={isPending || !assignTeacherId || !assignClassId || !assignSubjectId || !assignYearId}
               onClick={handleSaveAssignment}
             >
-              {isPending ? "Assigning..." : "Confirm Allocation"}
+              Confirm Allocation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CLASS CREATE / EDIT DIALOG */}
+      <Dialog open={classModalOpen} onOpenChange={(open) => !open && setClassModalOpen(false)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GraduationCap className="size-5 text-primary" />
+              {editingClass ? "Edit Class Stream" : "Create Class Stream"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingClass ? `Update details for ${editingClass.name}.` : "Add a new class or form stream to the academic registry."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                  Class Name *
+                </label>
+                <Input
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                  placeholder="e.g. Form 1A or Form 2 Science"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                  Form Level *
+                </label>
+                <select
+                  value={classFormLevel}
+                  onChange={(e) => setClassFormLevel(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
+                >
+                  {FORM_LEVELS.map((l) => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                  Stream / Division
+                </label>
+                <Input
+                  value={classStream}
+                  onChange={(e) => setClassStream(e.target.value)}
+                  placeholder="e.g. A, Science, Arts"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                  Capacity
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="200"
+                  value={classCapacity}
+                  onChange={(e) => setClassCapacity(e.target.value)}
+                  placeholder="50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Programme
+              </label>
+              <select
+                value={classProgramId}
+                onChange={(e) => setClassProgramId(e.target.value)}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
+              >
+                <option value="">General Stream (No Specific Programme)</option>
+                {programs.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Academic Year *
+              </label>
+              <select
+                value={classYearId}
+                onChange={(e) => setClassYearId(e.target.value)}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
+              >
+                <option value="">-- Select Year --</option>
+                {academicYears.map((y) => (
+                  <option key={y.id} value={y.id}>{y.name} {y.is_current ? "(Current)" : ""}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Class Teacher (Optional)
+              </label>
+              <select
+                value={classTeacherId}
+                onChange={(e) => setClassTeacherId(e.target.value)}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
+              >
+                <option value="">-- No Class Teacher Assigned --</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>{t.full_name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setClassModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              loading={isPending}
+              loadingText="Saving..."
+              disabled={isPending || !className.trim() || !classFormLevel || !classYearId}
+              onClick={handleSaveClass}
+            >
+              {editingClass ? "Update Class" : "Create Class"}
             </Button>
           </DialogFooter>
         </DialogContent>

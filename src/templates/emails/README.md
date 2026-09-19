@@ -1,11 +1,11 @@
-# Khulafasco SMS — Official Email Templates
+# Khulafasco SMS — Official School Email Templates
 
 These templates provide high-fidelity, school-branded email notifications for **Alkhulafau Arrashiduun Islamic Senior High School (Khulafasco)**.
 
 ## Brand Tokens Used
 - **Primary Color:** `#6B1A2A` (Rich Burgundy / Maroon)
 - **Secondary Accent:** `#C4956A` (Warm Rose Gold)
-- **School Crest:** `https://khulafasco-sms-disci-net.vercel.app/school-logo.png`
+- **School Crest:** `https://khulafasco-sms.vercel.app/school-logo.png`
 - **School Motto:** *"We Will Never Forget The Ladder"*
 
 ---
@@ -27,12 +27,22 @@ These templates provide high-fidelity, school-branded email notifications for **
    - **Supabase Subject:** `Password Reset Request | Khulafasco SMS`
    - **Target Setting in Supabase:** `Authentication` → `Email Templates` → `Reset password`
 
+4. **`magic-link.html`**
+   - **Purpose:** Sent when a staff member requests a passwordless magic login link.
+   - **Supabase Subject:** `Your Secure Login Link | Khulafasco SMS`
+   - **Target Setting in Supabase:** `Authentication` → `Email Templates` → `Magic link`
+
+5. **`email-change.html`**
+   - **Purpose:** Sent when a staff member's email address is being updated.
+   - **Supabase Subject:** `Confirm Email Address Change | Khulafasco SMS`
+   - **Target Setting in Supabase:** `Authentication` → `Email Templates` → `Change email address`
+
 ---
 
 ## How Email Confirmation Flow Works
 
 1. Supabase sends the branded email containing the action button linking to `{{ .ConfirmationURL }}`.
-2. The user clicks the button, which routes to `https://khulafasco-sms-disci-net.vercel.app/auth/confirm?token_hash=...&type=signup`.
+2. The user clicks the button, which routes to `https://khulafasco-sms.vercel.app/auth/confirm?token_hash=...&type=signup` (or local development equivalent).
 3. The Next.js handler (`src/app/auth/confirm/route.ts`):
    - Verifies the OTP token with Supabase Auth.
    - Automatically writes an `EMAIL_CONFIRMED` event into `public.audit_logs`.
@@ -43,12 +53,13 @@ These templates provide high-fidelity, school-branded email notifications for **
 
 ---
 
-## Applying to Supabase
+## Applying in Supabase Dashboard
 
-1. Open your **Supabase Dashboard**: [https://supabase.com/dashboard/project/uscveouabdtcyxlitiyo](https://supabase.com/dashboard/project/uscveouabdtcyxlitiyo)
-2. Navigate to **Authentication** → **Email Templates**.
-3. Select **Confirm signup**:
-   - Set Subject: `Verify Your Email | Khulafasco Student Management System`
-   - Copy and paste the HTML content from [`email-confirmation.html`](./email-confirmation.html).
-   - Click **Save**.
-4. Repeat for **Invite user** using [`staff-invite.html`](./staff-invite.html) and **Reset password** using [`password-recovery.html`](./password-recovery.html).
+1. Open your **Supabase Dashboard**: [https://supabase.com/dashboard/project/uscveouabdtcyxlitiyo/auth/templates](https://supabase.com/dashboard/project/uscveouabdtcyxlitiyo/auth/templates)
+2. Under **Email Templates**:
+   - For **Confirm signup**: Set subject to `Verify Your Email | Khulafasco Student Management System` and paste the contents of `email-confirmation.html`.
+   - For **Invite user**: Set subject to `Staff Account Invitation | Khulafasco SMS` and paste `staff-invite.html`.
+   - For **Reset password**: Set subject to `Password Reset Request | Khulafasco SMS` and paste `password-recovery.html`.
+   - For **Magic link**: Set subject to `Your Secure Login Link | Khulafasco SMS` and paste `magic-link.html`.
+   - For **Change email address**: Set subject to `Confirm Email Address Change | Khulafasco SMS` and paste `email-change.html`.
+3. Click **Save** on each template.

@@ -175,8 +175,8 @@ export function NewRequestClient() {
           )}
 
           <div className="pt-2">
-            <Button type="submit" disabled={isPending} className="w-full">
-              {isPending ? "Submitting Requisition..." : "Submit for Executive Review"}
+            <Button type="submit" loading={isPending} loadingText="Submitting Requisition..." className="w-full">
+              Submit for Executive Review
             </Button>
           </div>
         </form>

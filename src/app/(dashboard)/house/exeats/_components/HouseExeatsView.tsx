@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { StudentAvatar } from "@/components/shared/StudentAvatar";
 import type { HouseDashboardData } from "@/lib/data";
-import type { HouseExeatRecord } from "@/types";
+import type { House, HouseExeatRecord } from "@/types";
 import { createHouseExeatAction, returnHouseExeatAction } from "@/lib/actions/house";
 
 interface HouseExeatsViewProps {
@@ -32,11 +32,14 @@ interface HouseExeatsViewProps {
   initialExeats: HouseExeatRecord[];
   userRole?: string;
   userFullName?: string;
+  allHouses?: House[];
+  selectedHouseId?: string;
 }
 
 export function HouseExeatsView({
   data,
   initialExeats,
+  allHouses = [],
 }: HouseExeatsViewProps) {
   const { house, isAssigned, students } = data;
 
@@ -189,6 +192,41 @@ export function HouseExeatsView({
           <span>Issue New Exeat</span>
         </Button>
       </div>
+
+      {/* Scope Switcher for Senior House Staff & Admin */}
+      {allHouses.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground font-medium">Scope:</span>
+          <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-lg border border-border flex-wrap">
+            <Link
+              href="/house/exeats?houseId=all"
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                house.id === "all"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All Houses (School-Wide)
+            </Link>
+            {allHouses.map((h) => {
+              const isActive = h.id === house.id;
+              return (
+                <Link
+                  key={h.id}
+                  href={`/house/exeats?houseId=${h.id}`}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {h.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {feedback && (
         <div

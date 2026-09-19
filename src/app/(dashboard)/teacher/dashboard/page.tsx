@@ -51,17 +51,19 @@ export default async function TeacherDashboardPage() {
     <div className="space-y-6">
       {/* House Responsibility Banner */}
       {houseLabel && (
-        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 px-4 py-3">
-          <Home className="size-5 text-amber-600 dark:text-amber-400 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              House Responsibility: <span className="font-bold">{houseLabel}</span>
-            </p>
-            <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
-              You have additional responsibilities. Manage your house via the House section in the sidebar.
-            </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 px-4 py-3">
+          <div className="flex items-start sm:items-center gap-3 min-w-0">
+            <Home className="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 sm:mt-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                House Responsibility: <span className="font-bold">{houseLabel}</span>
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
+                You have additional responsibilities. Manage your house via the House section in the sidebar.
+              </p>
+            </div>
           </div>
-          <Button render={<Link href="/house/dashboard" />} variant="outline" size="sm" className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400">
+          <Button render={<Link href="/house/dashboard" />} variant="outline" size="sm" className="shrink-0 self-start sm:self-auto border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400">
             Go to House <ArrowRight className="size-3.5 ml-1" />
           </Button>
         </div>
@@ -77,7 +79,7 @@ export default async function TeacherDashboardPage() {
             Logged in as <strong>{session.fullName}</strong>. Classroom roll-call, term grade entry, and requisition tracking.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button render={<Link href="/teacher/attendance" />} variant="default" size="sm">
             <CheckSquare className="size-4 mr-1" /> Daily Attendance
           </Button>
@@ -86,6 +88,7 @@ export default async function TeacherDashboardPage() {
           </Button>
         </div>
       </div>
+
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

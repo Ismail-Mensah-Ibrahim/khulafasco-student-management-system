@@ -752,8 +752,8 @@ export function HouseManagementView({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Saving..." : "Save Changes"}
+                <Button type="submit" loading={isPending} loadingText="Saving...">
+                  Save Changes
                 </Button>
               </DialogFooter>
             </form>

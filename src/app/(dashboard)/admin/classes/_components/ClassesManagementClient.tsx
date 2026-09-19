@@ -495,8 +495,8 @@ export function ClassesManagementClient({
             <Button variant="outline" size="sm" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleCreateClass} disabled={isPending || !createName.trim()}>
-              {isPending ? "Creating..." : "Create Class"}
+            <Button size="sm" onClick={handleCreateClass} loading={isPending} loadingText="Creating..." disabled={isPending || !createName.trim()}>
+              Create Class
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -569,8 +569,8 @@ export function ClassesManagementClient({
             <Button variant="outline" size="sm" onClick={() => setEditModalClass(null)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleUpdateClass} disabled={isPending}>
-              {isPending ? "Saving..." : "Save Changes"}
+            <Button size="sm" onClick={handleUpdateClass} loading={isPending} loadingText="Saving...">
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -610,8 +610,8 @@ export function ClassesManagementClient({
             <Button variant="outline" size="sm" onClick={() => setTeacherModalClass(null)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleSaveTeacherAssignment} disabled={isPending}>
-              {isPending ? "Saving..." : "Save Assignment"}
+            <Button size="sm" onClick={handleSaveTeacherAssignment} loading={isPending} loadingText="Saving...">
+              Save Assignment
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -133,8 +133,8 @@ export function ITTicketsClient({ initialTickets, sessionUserId, isIT = true }: 
                   className="text-sm h-9"
                 />
               </div>
-              <Button type="submit" disabled={isPendingReset} size="default" className="shrink-0 h-9">
-                {isPendingReset ? "Sending..." : "Send Reset Link"}
+              <Button type="submit" loading={isPendingReset} loadingText="Sending..." size="default" className="shrink-0 h-9">
+                Send Reset Link
               </Button>
             </form>
             {resetMessage && (
@@ -203,8 +203,8 @@ export function ITTicketsClient({ initialTickets, sessionUserId, isIT = true }: 
                   )}
                   <div className="ml-auto flex items-center gap-2">
                     <Button type="button" onClick={() => setShowCreateForm(false)} variant="ghost" size="sm">Cancel</Button>
-                    <Button type="submit" disabled={isPendingCreate} size="sm">
-                      {isPendingCreate ? "Submitting..." : "Submit Ticket"}
+                    <Button type="submit" loading={isPendingCreate} loadingText="Submitting..." size="sm">
+                      Submit Ticket
                     </Button>
                   </div>
                 </div>
@@ -373,8 +373,8 @@ export function ITTicketsClient({ initialTickets, sessionUserId, isIT = true }: 
                 <Button type="button" onClick={() => setActiveTicket(null)} variant="ghost" size="sm">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isPendingStatus} size="sm">
-                  {isPendingStatus ? "Saving..." : "Save Status"}
+                <Button type="submit" loading={isPendingStatus} loadingText="Saving..." size="sm">
+                  Save Status
                 </Button>
               </div>
             </form>

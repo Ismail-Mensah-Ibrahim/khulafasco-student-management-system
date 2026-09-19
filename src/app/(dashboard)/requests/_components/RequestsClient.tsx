@@ -449,8 +449,8 @@ export function RequestsClient({
                 <Button type="button" onClick={() => setActiveModal(null)} variant="ghost" size="sm">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isPending} size="sm">
-                  {isPending ? "Submitting..." : "Confirm Decision"}
+                <Button type="submit" loading={isPending} loadingText="Submitting..." size="sm">
+                  Confirm Decision
                 </Button>
               </div>
             </form>
@@ -520,8 +520,8 @@ export function RequestsClient({
                 <Button type="button" onClick={() => setActiveModal(null)} variant="ghost" size="sm">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isPending} size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-                  {isPending ? "Releasing..." : "Confirm Release"}
+                <Button type="submit" loading={isPending} loadingText="Releasing..." size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                  Confirm Release
                 </Button>
               </div>
             </form>

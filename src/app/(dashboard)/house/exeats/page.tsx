@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { SCHOOL } from "@/config/branding";
 import { requireHouseStaff } from "@/lib/dal";
-import { getHouseDashboardData, getHouseExeats } from "@/lib/data";
+import { getHouseDashboardData, getHouseExeats, getHouses } from "@/lib/data";
 import { HouseExeatsView } from "./_components/HouseExeatsView";
 
 export const metadata: Metadata = {
@@ -17,12 +17,21 @@ export default async function HouseExeatsPage({
   const params = (await searchParams) ?? {};
   const overrideHouseId = typeof params.houseId === "string" ? params.houseId : undefined;
 
-  const dashboardData = await getHouseDashboardData(
-    session.id,
-    session.role,
-    overrideHouseId,
-    session.houseResponsibility
-  );
+  const isSenior =
+    session.role === "admin" ||
+    session.houseResponsibility === "senior_house_master" ||
+    session.houseResponsibility === "senior_house_mistress";
+
+  const [dashboardData, allHouses] = await Promise.all([
+    getHouseDashboardData(
+      session.id,
+      session.role,
+      overrideHouseId,
+      session.houseResponsibility
+    ),
+    isSenior ? getHouses() : Promise.resolve([]),
+  ]);
+
   const initialExeats = dashboardData.house ? await getHouseExeats(dashboardData.house.id) : [];
 
   return (
@@ -31,6 +40,8 @@ export default async function HouseExeatsPage({
       initialExeats={initialExeats}
       userRole={session.role}
       userFullName={session.fullName}
+      allHouses={allHouses}
+      selectedHouseId={overrideHouseId}
     />
   );
 }

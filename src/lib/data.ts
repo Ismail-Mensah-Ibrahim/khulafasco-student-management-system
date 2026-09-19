@@ -1628,16 +1628,9 @@ export async function getHouseDashboardData(
     targetHouseId = (profile as { house_id?: string | null })?.house_id || null;
   }
 
-  // If Admin or Senior House staff with no specific house assigned, pick the first active house
+  // If Admin or Senior House staff with no specific house assigned, default to "all" houses
   if (!targetHouseId && isSenior) {
-    const { data: firstHouse } = await supabase
-      .from("houses")
-      .select("id")
-      .order("name", { ascending: true })
-      .limit(1)
-      .single();
-
-    targetHouseId = firstHouse?.id || null;
+    targetHouseId = "all";
   }
 
   if (!targetHouseId) {
@@ -1659,7 +1652,91 @@ export async function getHouseDashboardData(
     };
   }
 
-  // Fetch house details
+  // --- SCHOOL-WIDE OVERSIGHT ("ALL" HOUSES) ---
+  if (targetHouseId === "all" && isSenior) {
+    const { data: allHousesData } = await supabase
+      .from("houses")
+      .select("*")
+      .order("name", { ascending: true });
+
+    const allHouses = allHousesData || [];
+    const totalCapacity = allHouses.reduce((sum, h) => sum + (h.capacity ?? 150), 0);
+
+    const houseData: House = {
+      id: "all",
+      name: "All Residential Houses",
+      code: "ALL",
+      capacity: totalCapacity,
+      created_at: new Date().toISOString(),
+      is_active: true,
+    };
+
+    // Fetch all active students across all houses
+    const { data: studentRows } = await supabase
+      .from("students")
+      .select("id, jhs_index_number, first_name, middle_name, last_name, gender, student_type, enrollment_status, photo_path, parent_name, parent_phone, house_id, house:houses(name), program:programs(name)")
+      .not("house_id", "is", null)
+      .eq("enrollment_status", "active")
+      .order("last_name", { ascending: true });
+
+    const students = (studentRows || []).map((s) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const program = s.program as any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const h = s.house as any;
+      return {
+        id: s.id,
+        jhsIndexNumber: s.jhs_index_number,
+        fullName: `${s.first_name} ${s.last_name}`,
+        firstName: s.first_name,
+        lastName: s.last_name,
+        photoPath: s.photo_path,
+        gender: s.gender as Gender,
+        houseId: s.house_id,
+        houseName: h?.name || "Assigned House",
+        programName: program?.name || "General",
+        enrollmentStatus: s.enrollment_status,
+        studentType: s.student_type,
+        parentName: s.parent_name,
+        parentPhone: s.parent_phone,
+      };
+    });
+
+    const maleCount = students.filter((s) => s.gender === "male").length;
+    const femaleCount = students.filter((s) => s.gender === "female").length;
+    const boardingCount = students.filter((s) => s.studentType === "boarding").length;
+    const dayCount = students.filter((s) => s.studentType === "day").length;
+    const total = students.length;
+    const occupancyPercent = totalCapacity > 0 ? Math.round((total / totalCapacity) * 100) : 0;
+
+    // Fetch exeats across all houses
+    const { data: exeats } = await supabase
+      .from("house_exeats")
+      .select("*, student:students(id, jhs_index_number, first_name, last_name, gender, photo_path), issuer:profiles!house_exeats_issued_by_fkey(full_name)")
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    const activeExeatsCount = (exeats || []).filter((e) => e.status === "active").length;
+
+    return {
+      house: houseData,
+      isAssigned: true,
+      totalStudents: total,
+      maleCount,
+      femaleCount,
+      boardingCount,
+      dayCount,
+      capacity: totalCapacity,
+      occupancyPercent,
+      houseMaster: null,
+      houseMistress: null,
+      students,
+      activeExeatsCount,
+      recentExeats: (exeats || []) as unknown as HouseExeatRecord[],
+    };
+  }
+
+  // --- SINGLE HOUSE DETAIL ---
   const { data: houseData } = await supabase
     .from("houses")
     .select("*")
@@ -1743,11 +1820,16 @@ export async function getHouseDashboardData(
 
 export async function getHouseExeats(houseId: string): Promise<HouseExeatRecord[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("house_exeats")
     .select("*, student:students(id, jhs_index_number, first_name, last_name, gender, photo_path), issuer:profiles!house_exeats_issued_by_fkey(full_name)")
-    .eq("house_id", houseId)
     .order("created_at", { ascending: false });
+
+  if (houseId && houseId !== "all") {
+    query = query.eq("house_id", houseId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("getHouseExeats error:", error);
@@ -1755,3 +1837,4 @@ export async function getHouseExeats(houseId: string): Promise<HouseExeatRecord[
   }
   return (data || []) as unknown as HouseExeatRecord[];
 }
+
