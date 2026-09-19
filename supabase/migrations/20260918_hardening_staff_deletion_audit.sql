@@ -1,4 +1,4 @@
-﻿-- Migration: 20260918_hardening_staff_deletion_audit.sql
+-- Migration: 20260918_hardening_staff_deletion_audit.sql
 -- Hardening: Staff Deletion Auth Consistency
 --
 -- Problem:

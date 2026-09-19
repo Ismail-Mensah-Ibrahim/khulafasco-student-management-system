@@ -1,4 +1,4 @@
-﻿-- Migration: 20260920_student_photos_storage.sql
+-- Migration: 20260920_student_photos_storage.sql
 -- Creates the student-photos storage bucket and sets up RLS policies for upload, download, and deletion.
 
 BEGIN;
