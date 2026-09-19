@@ -29,10 +29,16 @@ export async function createHouseExeatAction(formData: FormData): Promise<{
     }
 
     // Strict security check:
-    // If caller is house_master or house_mistress, they can ONLY issue exeats for their assigned house
-    if (session.role === "house_master" || session.role === "house_mistress") {
+    // Senior house staff and Admins can manage exeats across all houses.
+    // House Masters and Mistresses are strictly bounded to their assigned house.
+    const isSeniorOrAdmin =
+      session.role === "admin" ||
+      session.houseResponsibility === "senior_house_master" ||
+      session.houseResponsibility === "senior_house_mistress";
+
+    if (!isSeniorOrAdmin) {
       if (!session.houseId || session.houseId !== houseId) {
-        return { success: false, error: "Unauthorized: You may only manage students in your assigned house." };
+        return { success: false, error: "Unauthorized: You may only manage students in your assigned residential house." };
       }
     }
 
@@ -125,9 +131,14 @@ export async function returnHouseExeatAction(exeatId: string): Promise<{
     }
 
     // Strict security check
-    if (session.role === "house_master" || session.role === "house_mistress") {
+    const isSeniorOrAdmin =
+      session.role === "admin" ||
+      session.houseResponsibility === "senior_house_master" ||
+      session.houseResponsibility === "senior_house_mistress";
+
+    if (!isSeniorOrAdmin) {
       if (!session.houseId || session.houseId !== exeat.house_id) {
-        return { success: false, error: "Unauthorized: You may only manage students in your assigned house." };
+        return { success: false, error: "Unauthorized: You may only manage students in your assigned residential house." };
       }
     }
 

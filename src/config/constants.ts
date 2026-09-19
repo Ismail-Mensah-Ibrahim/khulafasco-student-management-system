@@ -86,6 +86,32 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   general_staff: "General Staff",
 };
 
+export const HOUSE_RESPONSIBILITIES = [
+  "house_master",
+  "house_mistress",
+  "senior_house_master",
+  "senior_house_mistress",
+] as const;
+
+export type HouseResponsibility = (typeof HOUSE_RESPONSIBILITIES)[number];
+
+export const HOUSE_RESPONSIBILITY_LABELS: Record<HouseResponsibility, string> = {
+  house_master: "House Master",
+  house_mistress: "House Mistress",
+  senior_house_master: "Senior House Master",
+  senior_house_mistress: "Senior House Mistress",
+};
+
+export const TIMETABLE_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+] as const;
+
+export type TimetableDay = (typeof TIMETABLE_DAYS)[number];
+
 export const REQUEST_CATEGORIES = [
   "Academic",
   "Teaching Materials",

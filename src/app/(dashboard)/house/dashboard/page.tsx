@@ -17,9 +17,14 @@ export default async function HouseDashboardPage({
   const params = (await searchParams) ?? {};
   const overrideHouseId = typeof params.houseId === "string" ? params.houseId : undefined;
 
+  const isSenior =
+    session.role === "admin" ||
+    session.houseResponsibility === "senior_house_master" ||
+    session.houseResponsibility === "senior_house_mistress";
+
   const [dashboardData, allHouses] = await Promise.all([
-    getHouseDashboardData(session.id, session.role, overrideHouseId),
-    session.role === "admin" ? getHouses() : Promise.resolve([]),
+    getHouseDashboardData(session.id, session.role, overrideHouseId, session.houseResponsibility),
+    isSenior ? getHouses() : Promise.resolve([]),
   ]);
 
   return (

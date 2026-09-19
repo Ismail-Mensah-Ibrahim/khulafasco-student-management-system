@@ -28,8 +28,10 @@ import type {
   Profile,
   StudentTransfer,
   HouseExeatRecord,
+  TeacherAssignment,
+  TimetableEntry,
 } from "@/types";
-import type { Gender, UserRole } from "@/config/constants";
+import type { Gender, UserRole, HouseResponsibility, TimetableDay } from "@/config/constants";
 import { getHouseDistributionData, type HouseDistributionItem } from "@/lib/services/house-allocation";
 
 export interface DashboardProgramStat {
@@ -906,6 +908,137 @@ export async function getSubjects(): Promise<Subject[]> {
   return (data ?? []) as Subject[];
 }
 
+export async function getTeacherAssignments(filters?: {
+  classId?: string;
+  teacherId?: string;
+  subjectId?: string;
+  academicYearId?: string;
+  semesterId?: string;
+}): Promise<TeacherAssignment[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("teacher_assignments")
+    .select(`
+      *,
+      teacher:profiles!teacher_assignments_teacher_id_fkey(id, full_name, email, role),
+      class:classes!teacher_assignments_class_id_fkey(id, name, form_level, stream),
+      subject:subjects!teacher_assignments_subject_id_fkey(id, name, code, department, is_elective),
+      semester:semesters!teacher_assignments_semester_id_fkey(id, name, semester_number)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (filters?.classId) query = query.eq("class_id", filters.classId);
+  if (filters?.teacherId) query = query.eq("teacher_id", filters.teacherId);
+  if (filters?.subjectId) query = query.eq("subject_id", filters.subjectId);
+  if (filters?.academicYearId) query = query.eq("academic_year_id", filters.academicYearId);
+  if (filters?.semesterId) query = query.eq("semester_id", filters.semesterId);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("getTeacherAssignments error:", error);
+    return [];
+  }
+  return (data ?? []) as TeacherAssignment[];
+}
+
+export async function getTimetableEntries(filters?: {
+  classId?: string;
+  teacherId?: string;
+  subjectId?: string;
+  academicYearId?: string;
+  semesterId?: string;
+  dayOfWeek?: string;
+  isPublished?: boolean;
+}): Promise<TimetableEntry[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("timetables")
+    .select(`
+      *,
+      class:classes(id, name, form_level, stream),
+      subject:subjects(id, name, code, department),
+      teacher:profiles(id, full_name, email),
+      academic_year:academic_years(id, name, is_current),
+      semester:semesters(id, name, semester_number)
+    `)
+    .order("day_of_week", { ascending: true })
+    .order("period_number", { ascending: true });
+
+  if (filters?.classId) query = query.eq("class_id", filters.classId);
+  if (filters?.teacherId) query = query.eq("teacher_id", filters.teacherId);
+  if (filters?.subjectId) query = query.eq("subject_id", filters.subjectId);
+  if (filters?.academicYearId) query = query.eq("academic_year_id", filters.academicYearId);
+  if (filters?.semesterId) query = query.eq("semester_id", filters.semesterId);
+  if (filters?.dayOfWeek) query = query.eq("day_of_week", filters.dayOfWeek);
+  if (typeof filters?.isPublished === "boolean") query = query.eq("is_published", filters.isPublished);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("getTimetableEntries error:", error);
+    return [];
+  }
+  return (data ?? []) as TimetableEntry[];
+}
+
+export interface TeacherWorkloadItem {
+  teacherId: string;
+  teacherName: string;
+  teacherEmail: string;
+  assignedClassesCount: number;
+  assignedSubjectsCount: number;
+  weeklyPeriodsCount: number;
+  teachingDaysCount: number;
+  classesList: string[];
+  subjectsList: string[];
+}
+
+export async function getTeacherWorkloadSummary(
+  academicYearId?: string,
+  semesterId?: string
+): Promise<TeacherWorkloadItem[]> {
+  const supabase = await createClient();
+
+  const [staff, assignments, timetables] = await Promise.all([
+    getStaffProfiles(),
+    getTeacherAssignments({ academicYearId, semesterId }),
+    getTimetableEntries({ academicYearId, semesterId }),
+  ]);
+
+  const teachers = staff.filter((s) => s.role === "teacher" || s.is_active);
+
+  return teachers.map((teacher) => {
+    const teacherAssignments = assignments.filter((a) => a.teacher_id === teacher.id);
+    const teacherTimetable = timetables.filter((t) => t.teacher_id === teacher.id);
+
+    const classesSet = new Set<string>();
+    const subjectsSet = new Set<string>();
+    const daysSet = new Set<string>();
+
+    teacherAssignments.forEach((a) => {
+      if (a.class?.name) classesSet.add(a.class.name);
+      if (a.subject?.name) subjectsSet.add(a.subject.name);
+    });
+
+    teacherTimetable.forEach((t) => {
+      if (t.class?.name) classesSet.add(t.class.name);
+      if (t.subject?.name) subjectsSet.add(t.subject.name);
+      if (t.day_of_week) daysSet.add(t.day_of_week);
+    });
+
+    return {
+      teacherId: teacher.id,
+      teacherName: teacher.full_name,
+      teacherEmail: teacher.email || "",
+      assignedClassesCount: classesSet.size,
+      assignedSubjectsCount: subjectsSet.size,
+      weeklyPeriodsCount: teacherTimetable.length,
+      teachingDaysCount: daysSet.size,
+      classesList: Array.from(classesSet),
+      subjectsList: Array.from(subjectsSet),
+    };
+  });
+}
+
 export async function getAttendanceRecords(classId?: string, date?: string): Promise<AttendanceRecord[]> {
   const supabase = await createClient();
   let query = supabase
@@ -1473,9 +1606,15 @@ export interface HouseDashboardData {
 export async function getHouseDashboardData(
   userId: string,
   userRole: UserRole,
-  overrideHouseId?: string
+  overrideHouseId?: string,
+  houseResponsibility?: HouseResponsibility | null
 ): Promise<HouseDashboardData> {
   const supabase = await createClient();
+
+  const isSenior =
+    userRole === "admin" ||
+    houseResponsibility === "senior_house_master" ||
+    houseResponsibility === "senior_house_mistress";
 
   let targetHouseId: string | null = overrideHouseId || null;
 
@@ -1489,8 +1628,8 @@ export async function getHouseDashboardData(
     targetHouseId = (profile as { house_id?: string | null })?.house_id || null;
   }
 
-  // If Admin with no specific house assigned, pick the first active house
-  if (!targetHouseId && userRole === "admin") {
+  // If Admin or Senior House staff with no specific house assigned, pick the first active house
+  if (!targetHouseId && isSenior) {
     const { data: firstHouse } = await supabase
       .from("houses")
       .select("id")
@@ -1532,10 +1671,10 @@ export async function getHouseDashboardData(
     .from("profiles")
     .select("*")
     .eq("house_id", targetHouseId)
-    .in("role", ["house_master", "house_mistress"]);
+    .or("role.in.(house_master,house_mistress),house_responsibility.in.(house_master,house_mistress)");
 
-  const houseMaster = leaders?.find((l) => l.role === "house_master") || null;
-  const houseMistress = leaders?.find((l) => l.role === "house_mistress") || null;
+  const houseMaster = leaders?.find((l) => l.role === "house_master" || l.house_responsibility === "house_master") || null;
+  const houseMistress = leaders?.find((l) => l.role === "house_mistress" || l.house_responsibility === "house_mistress") || null;
 
   // Fetch active students in this house
   const { data: studentRows } = await supabase
@@ -1616,6 +1755,3 @@ export async function getHouseExeats(houseId: string): Promise<HouseExeatRecord[
   }
   return (data || []) as unknown as HouseExeatRecord[];
 }
-
-
-

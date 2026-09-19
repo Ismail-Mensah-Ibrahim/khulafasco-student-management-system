@@ -18,7 +18,14 @@ import {
   XCircle,
   Phone,
 } from "lucide-react";
-import { ROLE_LABELS, ROLES, type UserRole } from "@/config/constants";
+import {
+  ROLE_LABELS,
+  ROLES,
+  type UserRole,
+  HOUSE_RESPONSIBILITIES,
+  HOUSE_RESPONSIBILITY_LABELS,
+  type HouseResponsibility,
+} from "@/config/constants";
 import type { Profile, StaffDeletionSafety, House } from "@/types";
 import {
   updateStaffRoleAction,
@@ -71,6 +78,7 @@ export function StaffManagementClient({
   // Dialog states
   const [roleModalStaff, setRoleModalStaff] = useState<Profile | null>(null);
   const [newRole, setNewRole] = useState<UserRole>("teacher");
+  const [newResponsibility, setNewResponsibility] = useState<string>("");
   const [selectedHouseId, setSelectedHouseId] = useState<string>("");
 
   const [editModalStaff, setEditModalStaff] = useState<Profile | null>(null);
@@ -101,6 +109,7 @@ export function StaffManagementClient({
   function handleOpenRoleModal(staff: Profile) {
     setRoleModalStaff(staff);
     setNewRole(staff.role);
+    setNewResponsibility(staff.house_responsibility || "");
     setSelectedHouseId(staff.house_id || "");
     setFeedback(null);
   }
@@ -112,13 +121,23 @@ export function StaffManagementClient({
       const formData = new FormData();
       formData.set("staff_id", targetStaff.id);
       formData.set("role", newRole);
+      formData.set("house_responsibility", newResponsibility);
       formData.set("house_id", selectedHouseId || "");
 
       const result = await updateStaffRoleAction(formData);
       if (result.success) {
         setFeedback({ type: "success", message: result.message });
         setStaffList((prev) =>
-          prev.map((s) => (s.id === targetStaff.id ? { ...s, role: newRole, house_id: selectedHouseId || null } : s))
+          prev.map((s) =>
+            s.id === targetStaff.id
+              ? {
+                  ...s,
+                  role: newRole,
+                  house_responsibility: (newResponsibility as HouseResponsibility) || null,
+                  house_id: selectedHouseId || null,
+                }
+              : s
+          )
         );
         setRoleModalStaff(null);
         router.refresh();
@@ -387,14 +406,27 @@ export function StaffManagementClient({
                         </div>
                       </td>
                       <td className="px-4 py-3.5">
-                        <Badge variant="outline" className="text-xs font-semibold">
-                          {ROLE_LABELS[staff.role] ?? staff.role}
-                        </Badge>
-                        {staff.house_id && (
-                          <div className="text-[11px] text-muted-foreground mt-0.5 font-medium">
-                            House: {houses.find((h) => h.id === staff.house_id)?.name || "Assigned"}
-                          </div>
-                        )}
+                        <div className="flex flex-col gap-1 items-start">
+                          <Badge variant="outline" className="text-xs font-semibold">
+                            {ROLE_LABELS[staff.role] ?? staff.role}
+                          </Badge>
+                          {staff.house_responsibility && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[11px] bg-primary/10 text-primary border-primary/20 font-medium px-2 py-0.5"
+                            >
+                              {HOUSE_RESPONSIBILITY_LABELS[staff.house_responsibility]}
+                              {staff.house_id
+                                ? ` (${houses.find((h) => h.id === staff.house_id)?.name || "House"})`
+                                : " (All Houses)"}
+                            </Badge>
+                          )}
+                          {!staff.house_responsibility && staff.house_id && (
+                            <div className="text-[11px] text-muted-foreground font-medium">
+                              House: {houses.find((h) => h.id === staff.house_id)?.name || "Assigned"}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3.5">
                         <Badge
@@ -501,7 +533,7 @@ export function StaffManagementClient({
 
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
-                Assign New Role
+                Primary Employment Role *
               </label>
               <select
                 value={newRole}
@@ -516,7 +548,33 @@ export function StaffManagementClient({
               </select>
             </div>
 
-            {(newRole === "house_master" || newRole === "house_mistress") && (
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Additional House Responsibility (Optional)
+              </label>
+              <select
+                value={newResponsibility}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setNewResponsibility(val);
+                  if (val === "senior_house_master" || val === "senior_house_mistress" || val === "") {
+                    setSelectedHouseId("");
+                  }
+                }}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
+              >
+                <option value="">None (No Residential House Assignment)</option>
+                <option value="house_master">House Master (Assigned House)</option>
+                <option value="house_mistress">House Mistress (Assigned House)</option>
+                <option value="senior_house_master">Senior House Master (School-wide Oversight - All Houses)</option>
+                <option value="senior_house_mistress">Senior House Mistress (School-wide Oversight - All Houses)</option>
+              </select>
+            </div>
+
+            {(newResponsibility === "house_master" ||
+              newResponsibility === "house_mistress" ||
+              newRole === "house_master" ||
+              newRole === "house_mistress") && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
                   Assign Residential House *
@@ -533,6 +591,15 @@ export function StaffManagementClient({
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {(newResponsibility === "senior_house_master" || newResponsibility === "senior_house_mistress") && (
+              <div className="p-2.5 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-900">
+                <p className="font-semibold">School-Wide House Oversight</p>
+                <p className="mt-0.5 text-indigo-700">
+                  Senior House Masters and Mistresses have administrative observation and exeat oversight across all 4 houses (Abubakar, Umar, Uthman, Ali).
+                </p>
               </div>
             )}
 
@@ -556,6 +623,7 @@ export function StaffManagementClient({
               disabled={
                 isPending ||
                 (newRole === roleModalStaff?.role &&
+                  newResponsibility === (roleModalStaff?.house_responsibility || "") &&
                   selectedHouseId === (roleModalStaff?.house_id || ""))
               }
             >

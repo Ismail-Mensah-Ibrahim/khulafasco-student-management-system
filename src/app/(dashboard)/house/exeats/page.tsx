@@ -17,7 +17,12 @@ export default async function HouseExeatsPage({
   const params = (await searchParams) ?? {};
   const overrideHouseId = typeof params.houseId === "string" ? params.houseId : undefined;
 
-  const dashboardData = await getHouseDashboardData(session.id, session.role, overrideHouseId);
+  const dashboardData = await getHouseDashboardData(
+    session.id,
+    session.role,
+    overrideHouseId,
+    session.houseResponsibility
+  );
   const initialExeats = dashboardData.house ? await getHouseExeats(dashboardData.house.id) : [];
 
   return (

@@ -8,23 +8,28 @@ import { SchoolLogo } from "@/components/branding/SchoolLogo";
 import { SCHOOL } from "@/config/branding";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 
-import { UserRole, ROLE_LABELS } from "@/config/constants";
+import { UserRole, ROLE_LABELS, type HouseResponsibility } from "@/config/constants";
 import { getNavItemsForRole } from "@/components/layout/nav-items";
 
 interface MobileSidebarProps {
   userRole?: UserRole;
   userName?: string;
+  houseResponsibility?: HouseResponsibility | null;
 }
 
 /**
  * Mobile drawer sidebar — triggered by hamburger button in the TopBar.
  * Only visible on small screens (md:hidden).
  */
-export function MobileSidebar({ userRole = "admin", userName = "Staff User" }: MobileSidebarProps) {
+export function MobileSidebar({
+  userRole = "admin",
+  userName = "Staff User",
+  houseResponsibility,
+}: MobileSidebarProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  const visibleItems = getNavItemsForRole(userRole);
+  const visibleItems = getNavItemsForRole(userRole, houseResponsibility);
 
   return (
     <>
