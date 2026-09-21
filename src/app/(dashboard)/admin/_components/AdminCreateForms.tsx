@@ -59,8 +59,8 @@ export function FeeTypeCreateForm() {
         <Landmark className="h-4 w-4" /> <span className="font-semibold">Create Fee Type</span>
       </div>
       <form action={createFeeTypeAction} className="grid gap-4 md:grid-cols-3">
-        <div className="space-y-2"><Label htmlFor="fee-name">Fee type name</Label><Input id="fee-name" name="name" required /></div>
-        <div className="space-y-2"><Label htmlFor="fee-description">Description</Label><Input id="fee-description" name="description" /></div>
+        <div className="space-y-2"><Label htmlFor="fee-name">Fee type name</Label><Input id="fee-name" name="name" required placeholder="e.g. Maintenance Fee, Hostel Fee, Admission Form, Madrasat Fee" /></div>
+        <div className="space-y-2"><Label htmlFor="fee-description">Description</Label><Input id="fee-description" name="description" placeholder="Optional note for this fee category" /></div>
         <div className="flex items-end"><Button type="submit" className="w-full"><Plus className="mr-2 h-4 w-4" />Create</Button></div>
       </form>
     </div>
