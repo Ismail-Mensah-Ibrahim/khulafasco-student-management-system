@@ -20,6 +20,7 @@ interface SidebarProps {
   userName?: string;
   userEmail?: string;
   houseResponsibility?: HouseResponsibility | null;
+  additionalRoles?: UserRole[];
 }
 
 /**
@@ -31,11 +32,12 @@ export function Sidebar({
   userName = "Staff User",
   userEmail = "",
   houseResponsibility,
+  additionalRoles = [],
 }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
-  const visibleItems = getNavItemsForRole(userRole, houseResponsibility);
+  const visibleItems = getNavItemsForRole(userRole, houseResponsibility, additionalRoles);
 
   // Group by section
   const sections: string[] = [];

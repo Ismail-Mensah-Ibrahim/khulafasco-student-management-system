@@ -15,6 +15,7 @@ interface MobileSidebarProps {
   userRole?: UserRole;
   userName?: string;
   houseResponsibility?: HouseResponsibility | null;
+  additionalRoles?: UserRole[];
 }
 
 /**
@@ -25,11 +26,12 @@ export function MobileSidebar({
   userRole = "admin",
   userName = "Staff User",
   houseResponsibility,
+  additionalRoles = [],
 }: MobileSidebarProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  const visibleItems = getNavItemsForRole(userRole, houseResponsibility);
+  const visibleItems = getNavItemsForRole(userRole, houseResponsibility, additionalRoles);
 
   return (
     <>

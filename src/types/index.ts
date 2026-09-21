@@ -68,6 +68,7 @@ export interface Profile {
   full_name: string;
   email?: string | null;
   role: UserRole;
+  additional_roles?: UserRole[];
   is_active: boolean;
   phone: string | null;
   house_id?: string | null;

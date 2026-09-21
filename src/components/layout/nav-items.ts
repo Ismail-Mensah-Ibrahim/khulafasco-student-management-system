@@ -38,7 +38,8 @@ export interface NavItem {
 
 export function getNavItemsForRole(
   role: UserRole,
-  houseResponsibility?: HouseResponsibility | null
+  houseResponsibility?: HouseResponsibility | null,
+  additionalRoles: readonly UserRole[] = []
 ): NavItem[] {
   let items: NavItem[] = [];
 
@@ -162,6 +163,16 @@ export function getNavItemsForRole(
         { label: "IT Support", href: "/it/tickets", icon: LifeBuoy, roles: ["general_staff"], section: "Support" },
       ];
       break;
+  }
+
+  for (const additionalRole of additionalRoles) {
+    if (additionalRole === role) continue;
+    const additionalItems = getNavItemsForRole(additionalRole, houseResponsibility);
+    for (const item of additionalItems) {
+      if (!items.some((existingItem) => existingItem.href === item.href)) {
+        items.push(item);
+      }
+    }
   }
 
   // If staff has additional house responsibility, append residential house items

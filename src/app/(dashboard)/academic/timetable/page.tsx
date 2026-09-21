@@ -29,7 +29,7 @@ export default async function TimetablePage() {
     getTeacherWorkloadSummary(),
   ]);
 
-  const teachers = staff.filter((s) => s.role === "teacher" || s.role === "academic_head");
+  const teachers = staff.filter((s) => s.is_active && (s.role === "teacher" || s.role === "academic_head" || s.role === "admin" || s.additional_roles?.includes("teacher")));
 
   return (
     <TimetableManager

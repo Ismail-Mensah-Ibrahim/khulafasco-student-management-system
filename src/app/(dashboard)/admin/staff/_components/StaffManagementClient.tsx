@@ -80,6 +80,7 @@ export function StaffManagementClient({
   // Dialog states
   const [roleModalStaff, setRoleModalStaff] = useState<Profile | null>(null);
   const [newRole, setNewRole] = useState<UserRole>("teacher");
+  const [additionalRoles, setAdditionalRoles] = useState<UserRole[]>([]);
   const [newResponsibility, setNewResponsibility] = useState<string>("");
   const [selectedHouseId, setSelectedHouseId] = useState<string>("");
 
@@ -113,6 +114,7 @@ export function StaffManagementClient({
   function handleOpenRoleModal(staff: Profile) {
     setRoleModalStaff(staff);
     setNewRole(staff.role);
+    setAdditionalRoles(staff.additional_roles ?? []);
     setNewResponsibility(staff.house_responsibility || "");
     setSelectedHouseId(staff.house_id || "");
     setFeedback(null);
@@ -125,6 +127,7 @@ export function StaffManagementClient({
       const formData = new FormData();
       formData.set("staff_id", targetStaff.id);
       formData.set("role", newRole);
+      formData.set("additional_roles", JSON.stringify(additionalRoles));
       formData.set("house_responsibility", newResponsibility);
       formData.set("house_id", selectedHouseId || "");
 
@@ -137,6 +140,7 @@ export function StaffManagementClient({
               ? {
                   ...s,
                   role: newRole,
+                  additional_roles: additionalRoles,
                   house_responsibility: (newResponsibility as HouseResponsibility) || null,
                   house_id: selectedHouseId || null,
                 }
@@ -444,6 +448,11 @@ export function StaffManagementClient({
                           <Badge variant="outline" className="text-xs font-semibold">
                             {ROLE_LABELS[staff.role] ?? staff.role}
                           </Badge>
+                          {staff.additional_roles?.map((role) => (
+                            <Badge key={role} variant="secondary" className="text-[11px] font-medium">
+                              Additional: {ROLE_LABELS[role] ?? role}
+                            </Badge>
+                          ))}
                           {staff.house_responsibility && (
                             <Badge
                               variant="secondary"
@@ -584,6 +593,34 @@ export function StaffManagementClient({
 
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                Additional System Roles
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-md border border-input p-3">
+                {ROLES.filter((role) => role !== newRole).map((role) => (
+                  <label key={role} className="flex items-center gap-2 text-xs font-medium">
+                    <input
+                      type="checkbox"
+                      checked={additionalRoles.includes(role)}
+                      onChange={(event) =>
+                        setAdditionalRoles((current) =>
+                          event.target.checked
+                            ? [...current, role]
+                            : current.filter((currentRole) => currentRole !== role)
+                        )
+                      }
+                      className="accent-primary"
+                    />
+                    {ROLE_LABELS[role]}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Additional roles grant related duties while preserving the primary employment role.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
                 Additional House Responsibility (Optional)
               </label>
               <select
@@ -659,6 +696,7 @@ export function StaffManagementClient({
               disabled={
                 isPending ||
                 (newRole === roleModalStaff?.role &&
+                  JSON.stringify(additionalRoles) === JSON.stringify(roleModalStaff?.additional_roles ?? []) &&
                   newResponsibility === (roleModalStaff?.house_responsibility || "") &&
                   selectedHouseId === (roleModalStaff?.house_id || ""))
               }
