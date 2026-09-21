@@ -3,6 +3,7 @@ import { SCHOOL } from "@/config/branding";
 import { requireAcademicOrAdmin } from "@/lib/dal";
 import { getAcademicYears, getSemesters } from "@/lib/data";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { hasRole } from "@/config/constants";
 import { SemestersManagementClient } from "./_components/SemestersManagementClient";
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default async function AdminSemestersPage() {
       <SemestersManagementClient
         initialSemesters={semesters}
         academicYears={academicYears}
-        canManage={session.role === "admin" || session.role === "academic_head"}
+        canManage={hasRole(session.role, session.additionalRoles, "admin") || hasRole(session.role, session.additionalRoles, "academic_head")}
       />
     </div>
   );

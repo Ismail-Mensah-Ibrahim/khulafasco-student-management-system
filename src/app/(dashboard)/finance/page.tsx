@@ -12,6 +12,7 @@ import { requireRole } from "@/lib/dal";
 import { getAcademicYears, getFeeTypes, getHouses, getPrograms, getStudentFinanceByIndex, getStudentFinancialReconciliation } from "@/lib/data";
 import { formatCurrency, getFullName } from "@/lib/utils";
 import { SCHOOL } from "@/config/branding";
+import { hasRole } from "@/config/constants";
 
 export const metadata: Metadata = {
   title: `Finance | ${SCHOOL.shortName}`,
@@ -64,7 +65,7 @@ export default async function FinancePage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await requireRole(["admin", "finance_officer", "headmaster"]);
-  const canManageFinance = session.role === "admin" || session.role === "finance_officer";
+  const canManageFinance = hasRole(session.role, session.additionalRoles, "admin") || hasRole(session.role, session.additionalRoles, "finance_officer");
   const params = (await searchParams) ?? {};
   const indexNumber = typeof params.index === "string" ? params.index.trim() : "";
   const invalidIndex = indexNumber.length > 0 && !/^\d{10}$/.test(indexNumber);

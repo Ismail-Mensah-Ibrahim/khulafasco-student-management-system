@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SCHOOL } from "@/config/branding";
 import { verifySession } from "@/lib/dal";
+import { hasRole } from "@/config/constants";
 import { getITTickets } from "@/lib/data";
 import { ITTicketsClient } from "./_components/ITTicketsClient";
 
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default async function ITTicketsPage() {
   const session = await verifySession();
-  const isIT = session.role === "it_officer" || session.role === "admin";
+  const isIT = hasRole(session.role, session.additionalRoles, "it_officer") || hasRole(session.role, session.additionalRoles, "admin");
   const tickets = isIT ? await getITTickets() : await getITTickets({ requesterId: session.id });
 
   return (

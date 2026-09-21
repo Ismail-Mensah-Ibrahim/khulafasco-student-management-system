@@ -6,7 +6,7 @@ import { requireRole } from '@/lib/dal';
 import { getStudentByJhsIndexNumber } from '@/lib/data';
 import { formatDate, getFullName } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { GENDER_LABELS } from '@/config/constants';
+import { GENDER_LABELS, hasRole } from '@/config/constants';
 import { DeleteStudentDialog } from './_components/DeleteStudentDialog';
 
 export async function generateMetadata({ params }: { params: Promise<{ jhs_index_number: string }> }): Promise<Metadata> {
@@ -25,7 +25,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   if (!student) return notFound();
 
   const fullName = getFullName(student.first_name, student.middle_name, student.last_name);
-  const isAdmin = session.role === 'admin';
+  const isAdmin = hasRole(session.role, session.additionalRoles, 'admin');
 
   return (
     <div className="space-y-6">
