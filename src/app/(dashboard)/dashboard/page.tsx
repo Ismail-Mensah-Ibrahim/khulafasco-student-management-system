@@ -5,6 +5,7 @@ import { SCHOOL } from "@/config/branding";
 import { verifySession } from "@/lib/dal";
 import { getDashboardSummary, getFinanceDashboardMetrics } from "@/lib/data";
 import { formatCurrency } from "@/lib/utils";
+import { hasRole } from "@/config/constants";
 import {
   Users,
   Home,
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const session = await verifySession();
 
-  if (session.role === "finance_officer") {
+  if (hasRole(session.role, session.additionalRoles, "finance_officer")) {
     const metrics = await getFinanceDashboardMetrics();
 
     return (
@@ -200,7 +201,7 @@ export default async function DashboardPage() {
     );
   }
 
-  if (session.role !== "admin") {
+  if (!hasRole(session.role, session.additionalRoles, "admin")) {
     switch (session.role) {
       case "it_officer":
         redirect("/it/dashboard");

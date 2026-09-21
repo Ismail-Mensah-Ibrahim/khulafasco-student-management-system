@@ -9,7 +9,7 @@ import {
   releaseRequestFundsAction,
   confirmRequestFulfillmentAction,
 } from "@/lib/actions/requests";
-import { REQUEST_STATUSES } from "@/config/constants";
+import { hasRole, REQUEST_STATUSES } from "@/config/constants";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,8 +57,8 @@ export function RequestsClient({
 
   const [isPending, startTransition] = useTransition();
 
-  const isReviewer = currentUser.role === "headmaster" || currentUser.role === "admin";
-  const isFinance = currentUser.role === "finance_officer" || currentUser.role === "admin";
+  const isReviewer = hasRole(currentUser.role, currentUser.additionalRoles, "headmaster") || hasRole(currentUser.role, currentUser.additionalRoles, "admin");
+  const isFinance = hasRole(currentUser.role, currentUser.additionalRoles, "finance_officer") || hasRole(currentUser.role, currentUser.additionalRoles, "admin");
 
   const filteredRequests = requestsList.filter((req) => {
     if (filterStatus !== "all" && req.status !== filterStatus) return false;
