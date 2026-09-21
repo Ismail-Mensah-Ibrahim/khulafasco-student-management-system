@@ -4,6 +4,7 @@ import { verifySession } from "@/lib/dal";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { AuthProvider } from "@/lib/auth-context";
+import { Toaster } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -28,6 +29,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
 
   return (
     <AuthProvider user={session}>
+      <Toaster />
       <div className="flex h-screen overflow-hidden" style={{ background: "var(--background)" }}>
         <Sidebar
           userRole={session.role}
