@@ -12,6 +12,7 @@ import {
   Filter,
   UserCheck,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { FORM_LEVELS, type FormLevel } from "@/config/constants";
 import type { AcademicYear, Profile, Program, SchoolClass } from "@/types";
@@ -20,6 +21,7 @@ import {
   updateClassAction,
   assignClassTeacherAction,
   toggleClassActiveAction,
+  deleteClassPermanentlyAction,
 } from "@/lib/actions/academic-lifecycle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -183,6 +185,25 @@ export function ClassesManagementClient({
           ...current,
           [c.id]: { ...c, is_active: nextActive },
         }));
+      } else {
+        setFeedback({ type: "error", message: result.message });
+      }
+    });
+  }
+
+  function handleDeleteClass(c: SchoolClass) {
+    if (!confirm(`Permanently delete "${c.name}"? This removes all class-linked records and cannot be undone.`)) return;
+
+    startTransition(async () => {
+      const result = await deleteClassPermanentlyAction(c.id);
+      if (result.success) {
+        setFeedback({ type: "success", message: result.message });
+        setClassOverrides((current) => {
+          const next = { ...current };
+          delete next[c.id];
+          return next;
+        });
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: result.message });
       }
@@ -373,6 +394,16 @@ export function ClassesManagementClient({
                       title={c.is_active === false ? "Activate" : "Archive"}
                     >
                       <Archive className="size-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => handleDeleteClass(c)}
+                      disabled={isPending}
+                      title="Permanently delete class"
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="size-3.5" />
                     </Button>
                   </div>
                 )}
