@@ -134,7 +134,7 @@ export function getNavItemsForRole(
 
     case "finance_officer":
       items = [
-        { label: "Finance Dashboard", href: "/finance", icon: LayoutDashboard, roles: ["finance_officer"] },
+        { label: "Finance Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["finance_officer"] },
         { label: "Find Student", href: "/finance?index=", icon: Search, roles: ["finance_officer"], section: "Student Accounts" },
         { label: "Students Directory", href: "/students", icon: Users, roles: ["finance_officer"], section: "Student Accounts" },
         { label: "Transfers (STP)", href: "/students/transfers", icon: ArrowRightLeft, roles: ["finance_officer"], section: "Student Accounts" },

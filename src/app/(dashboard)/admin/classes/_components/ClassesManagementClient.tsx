@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   BookOpen,
   PlusCircle,
@@ -48,7 +49,8 @@ export function ClassesManagementClient({
   teachers,
   canManage,
 }: ClassesManagementClientProps) {
-  const [classesList, setClassesList] = useState<SchoolClass[]>(initialClasses);
+  const router = useRouter();
+  const [classOverrides, setClassOverrides] = useState<Record<string, SchoolClass>>({});
   const [search, setSearch] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
   const [selectedYear, setSelectedYear] = useState<string>("all");
@@ -70,6 +72,8 @@ export function ClassesManagementClient({
   const [createYearId, setCreateYearId] = useState(academicYears.find((y) => y.is_current)?.id || academicYears[0]?.id || "");
   const [createTeacherId, setCreateTeacherId] = useState("");
   const [createCapacity, setCreateCapacity] = useState(50);
+
+  const classesList = initialClasses.map((schoolClass) => classOverrides[schoolClass.id] ?? schoolClass);
 
   // Filter
   const filteredClasses = classesList.filter((c) => {
@@ -102,8 +106,7 @@ export function ClassesManagementClient({
         setIsCreateOpen(false);
         setCreateName("");
         setCreateStream("");
-        // Reload list via window or optimistic state
-        window.location.reload();
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: result.message });
       }
@@ -125,6 +128,8 @@ export function ClassesManagementClient({
       if (result.success) {
         setFeedback({ type: "success", message: result.message });
         setEditModalClass(null);
+        setClassOverrides((current) => ({ ...current, [editModalClass.id]: editModalClass }));
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: result.message });
       }
@@ -141,10 +146,17 @@ export function ClassesManagementClient({
       const result = await assignClassTeacherAction(formData);
       if (result.success) {
         setFeedback({ type: "success", message: result.message });
-        const teacherObj = teachers.find((t) => t.id === selectedTeacherId) || null;
-        teacherModalClass.class_teacher_id = selectedTeacherId || null;
-        teacherModalClass.class_teacher = teacherObj || undefined;
+        const teacherObj = teachers.find((teacher) => teacher.id === selectedTeacherId) || undefined;
+        setClassOverrides((current) => ({
+          ...current,
+          [teacherModalClass.id]: {
+            ...teacherModalClass,
+            class_teacher_id: selectedTeacherId || null,
+            class_teacher: teacherObj,
+          },
+        }));
         setTeacherModalClass(null);
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: result.message });
       }
@@ -167,8 +179,10 @@ export function ClassesManagementClient({
       const result = await toggleClassActiveAction(formData);
       if (result.success) {
         setFeedback({ type: "success", message: result.message });
-        c.is_active = nextActive;
-        setClassesList([...classesList]);
+        setClassOverrides((current) => ({
+          ...current,
+          [c.id]: { ...c, is_active: nextActive },
+        }));
       } else {
         setFeedback({ type: "error", message: result.message });
       }
