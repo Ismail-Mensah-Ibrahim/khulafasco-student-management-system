@@ -29,7 +29,7 @@ export default async function AcademicClassesPage() {
     getPrograms(),
   ]);
 
-  const teachers = staff.filter((s) => s.role === "teacher" || s.role === "academic_head" || s.is_active);
+  const teachers = staff.filter((s) => s.is_active && (s.role === "teacher" || s.role === "academic_head" || s.role === "admin" || s.additional_roles?.includes("teacher")));
 
   return (
     <div className="space-y-6">

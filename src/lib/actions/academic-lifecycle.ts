@@ -14,6 +14,25 @@ function getText(formData: FormData, name: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+async function canBeAssignedTeachingWork(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  staffId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("role, additional_roles, is_active")
+    .eq("id", staffId)
+    .single();
+
+  return Boolean(
+    data?.is_active &&
+      (data.role === "admin" ||
+        data.role === "academic_head" ||
+        data.role === "teacher" ||
+        data.additional_roles?.includes("teacher"))
+  );
+}
+
 // ---------------------------------------------------------------------------
 // SEMESTER ACTIONS
 // ---------------------------------------------------------------------------
@@ -241,6 +260,10 @@ export async function createClassAction(formData: FormData): Promise<AcademicLif
     return { success: false, message: "Invalid form level. Must be Form 1, Form 2, or Form 3." };
   }
 
+  if (classTeacherId && !(await canBeAssignedTeachingWork(supabase, classTeacherId))) {
+    return { success: false, message: "The selected class teacher must be an active teacher or hold teaching as an additional role." };
+  }
+
   const { data: newClass, error } = await supabase
     .from("classes")
     .insert({
@@ -296,6 +319,10 @@ export async function updateClassAction(formData: FormData): Promise<AcademicLif
     return { success: false, message: "Class ID, name, and form level are required." };
   }
 
+  if (classTeacherId && !(await canBeAssignedTeachingWork(supabase, classTeacherId))) {
+    return { success: false, message: "The selected class teacher must be an active teacher or hold teaching as an additional role." };
+  }
+
   const { error } = await supabase
     .from("classes")
     .update({
@@ -339,6 +366,10 @@ export async function assignClassTeacherAction(formData: FormData): Promise<Acad
 
   if (!classId) {
     return { success: false, message: "Class ID is required." };
+  }
+
+  if (teacherId && !(await canBeAssignedTeachingWork(supabase, teacherId))) {
+    return { success: false, message: "The selected class teacher must be an active teacher or hold teaching as an additional role." };
   }
 
   const { error } = await supabase

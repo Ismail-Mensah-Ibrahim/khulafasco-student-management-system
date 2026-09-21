@@ -500,11 +500,23 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
 
   const staffId = getText(formData, "staff_id");
   const newRole = getText(formData, "role");
+  const additionalRolesValue = getText(formData, "additional_roles");
   const houseResponsibilityInput = getText(formData, "house_responsibility");
   const houseIdInput = getText(formData, "house_id") || null;
 
   if (!staffId || !ROLES.includes(newRole as never)) {
     return { success: false, message: "Invalid staff ID or role specified." };
+  }
+
+  let additionalRoles: (typeof ROLES)[number][] = [];
+  try {
+    const parsed = JSON.parse(additionalRolesValue || "[]");
+    if (!Array.isArray(parsed) || parsed.some((role) => !ROLES.includes(role as never))) {
+      return { success: false, message: "Invalid additional role selection." };
+    }
+    additionalRoles = parsed.filter((role): role is (typeof ROLES)[number] => role !== newRole);
+  } catch {
+    return { success: false, message: "Invalid additional role selection." };
   }
 
   const validResponsibility = HOUSE_RESPONSIBILITIES.includes(houseResponsibilityInput as never)
@@ -541,11 +553,13 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
   // Update profile
   const updatePayload: {
     role: (typeof ROLES)[number];
+    additional_roles: (typeof ROLES)[number][];
     house_responsibility: HouseResponsibility | null;
     house_id: string | null;
     updated_at: string;
   } = {
     role: newRole as (typeof ROLES)[number],
+    additional_roles: additionalRoles,
     house_responsibility: validResponsibility,
     house_id: finalHouseId,
     updated_at: new Date().toISOString(),

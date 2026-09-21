@@ -14,6 +14,7 @@ interface TopBarProps {
   userName?: string;
   userEmail?: string;
   houseResponsibility?: HouseResponsibility | null;
+  additionalRoles?: UserRole[];
   pageTitle?: string;
 }
 
@@ -26,6 +27,7 @@ export function TopBar({
   userName = "Staff User",
   userEmail = "",
   houseResponsibility,
+  additionalRoles = [],
   pageTitle,
 }: TopBarProps) {
   const initials = getInitials(userName);
@@ -58,6 +60,7 @@ export function TopBar({
           userRole={userRole}
           userName={userName}
           houseResponsibility={houseResponsibility}
+          additionalRoles={additionalRoles}
         />
         <SchoolLogo size="sm" showName />
       </div>

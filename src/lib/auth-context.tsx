@@ -14,6 +14,7 @@ export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
+  additionalRoles: UserRole[];
   fullName: string;
 }
 

@@ -73,6 +73,14 @@ export const ROLES = [
 
 export type UserRole = (typeof ROLES)[number];
 
+export function hasRole(
+  primaryRole: UserRole,
+  additionalRoles: readonly UserRole[] | null | undefined,
+  requiredRole: UserRole
+): boolean {
+  return primaryRole === requiredRole || Boolean(additionalRoles?.includes(requiredRole));
+}
+
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "System Administrator",
   it_officer: "IT Officer / Facilitator",

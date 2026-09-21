@@ -372,6 +372,22 @@ export async function assignTeacherAction(formData: FormData): Promise<AcademicA
     return { success: false, message: "Teacher, class, subject, and academic year are required." };
   }
 
+  const { data: teacherProfile } = await supabase
+    .from("profiles")
+    .select("role, additional_roles, is_active")
+    .eq("id", teacherId)
+    .single();
+  const canTeach = Boolean(
+    teacherProfile?.is_active &&
+      (teacherProfile.role === "admin" ||
+        teacherProfile.role === "academic_head" ||
+        teacherProfile.role === "teacher" ||
+        teacherProfile.additional_roles?.includes("teacher"))
+  );
+  if (!canTeach) {
+    return { success: false, message: "The selected staff member must be an active teacher or hold teaching as an additional role." };
+  }
+
   // Insert or update assignment
   const { error } = await supabase.from("teacher_assignments").upsert(
     {
