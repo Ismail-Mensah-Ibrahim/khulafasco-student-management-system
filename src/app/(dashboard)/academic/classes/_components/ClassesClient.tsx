@@ -25,7 +25,6 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
-  Layers,
   UserCheck,
 } from "lucide-react";
 import {
@@ -38,6 +37,7 @@ import {
 } from "@/lib/actions/academics";
 import { createClassAction, updateClassAction, deleteClassPermanentlyAction } from "@/lib/actions/academic-lifecycle";
 import { FORM_LEVELS } from "@/config/constants";
+import { notifyError, notifySuccess } from "@/components/ui/toast";
 
 interface ClassesClientProps {
   classes: SchoolClass[];
@@ -62,7 +62,6 @@ export function ClassesClient({
   const [tab, setTab] = useState<"classes" | "assignments" | "subjects">("assignments");
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Subject Modal states
   const [subjectModalOpen, setSubjectModalOpen] = useState(false);
@@ -132,7 +131,6 @@ export function ClassesClient({
     setClassTeacherId("");
     setClassCapacity("50");
     setClassModalOpen(true);
-    setFeedback(null);
   }
 
   function handleOpenEditClass(cls: SchoolClass) {
@@ -145,7 +143,6 @@ export function ClassesClient({
     setClassTeacherId(cls.class_teacher_id || "");
     setClassCapacity(String(cls.capacity || 50));
     setClassModalOpen(true);
-    setFeedback(null);
   }
 
   function handleSaveClass() {
@@ -170,11 +167,11 @@ export function ClassesClient({
       }
 
       if (res.success) {
-        setFeedback({ type: "success", message: res.message });
+        notifySuccess(res.message);
         setClassModalOpen(false);
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: res.message });
+        notifyError(res.message);
       }
     });
   }
@@ -184,7 +181,7 @@ export function ClassesClient({
 
     startTransition(async () => {
       const res = await deleteClassPermanentlyAction(cls.id);
-      setFeedback({ type: res.success ? "success" : "error", message: res.message });
+      (res.success ? notifySuccess : notifyError)(res.message);
       if (res.success) router.refresh();
     });
   }
@@ -198,7 +195,6 @@ export function ClassesClient({
     setSubjectIsElective(false);
     setSubjectDesc("");
     setSubjectModalOpen(true);
-    setFeedback(null);
   }
 
   function handleOpenEditSubject(sub: Subject) {
@@ -209,7 +205,6 @@ export function ClassesClient({
     setSubjectIsElective(sub.is_elective);
     setSubjectDesc(sub.description || "");
     setSubjectModalOpen(true);
-    setFeedback(null);
   }
 
   function handleSaveSubject() {
@@ -232,11 +227,11 @@ export function ClassesClient({
       }
 
       if (res.success) {
-        setFeedback({ type: "success", message: res.message });
+        notifySuccess(res.message);
         setSubjectModalOpen(false);
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: res.message });
+        notifyError(res.message);
       }
     });
   }
@@ -252,10 +247,10 @@ export function ClassesClient({
     startTransition(async () => {
       const res = await toggleSubjectStatusAction(sub.id, nextStatus);
       if (res.success) {
-        setFeedback({ type: "success", message: res.message });
+        notifySuccess(res.message);
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: res.message });
+        notifyError(res.message);
       }
     });
   }
@@ -266,10 +261,10 @@ export function ClassesClient({
     startTransition(async () => {
       const res = await deleteSubjectAction(sub.id);
       if (res.success) {
-        setFeedback({ type: "success", message: res.message });
+        notifySuccess(res.message);
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: res.message });
+        notifyError(res.message);
       }
     });
   }
@@ -280,7 +275,6 @@ export function ClassesClient({
     setAssignClassId(classes[0]?.id || "");
     setAssignSubjectId(subjects[0]?.id || "");
     setAssignModalOpen(true);
-    setFeedback(null);
   }
 
   function handleSaveAssignment() {
@@ -296,11 +290,11 @@ export function ClassesClient({
 
       const res = await assignTeacherAction(formData);
       if (res.success) {
-        setFeedback({ type: "success", message: res.message });
+        notifySuccess(res.message);
         setAssignModalOpen(false);
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: res.message });
+        notifyError(res.message);
       }
     });
   }
@@ -311,36 +305,16 @@ export function ClassesClient({
     startTransition(async () => {
       const res = await removeTeacherAssignmentAction(assignmentId);
       if (res.success) {
-        setFeedback({ type: "success", message: res.message });
+        notifySuccess(res.message);
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: res.message });
+        notifyError(res.message);
       }
     });
   }
 
   return (
     <div className="space-y-6">
-      {/* Feedback banner */}
-      {feedback && (
-        <div
-          className={`p-3.5 rounded-lg flex items-center justify-between text-xs font-semibold ${
-            feedback.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-              : "bg-rose-50 text-rose-800 border border-rose-200"
-          }`}
-        >
-          <span>{feedback.message}</span>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="text-xs uppercase hover:underline opacity-80"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
       {/* Controls & Tab Switcher */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 p-1 bg-muted rounded-lg w-fit flex-wrap">

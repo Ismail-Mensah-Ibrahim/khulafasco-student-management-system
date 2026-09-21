@@ -7,11 +7,9 @@ import {
   PlusCircle,
   Edit2,
   Archive,
-  CheckCircle2,
   Search,
   Filter,
   UserCheck,
-  AlertCircle,
   Trash2,
 } from "lucide-react";
 import { FORM_LEVELS, type FormLevel } from "@/config/constants";
@@ -35,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { notifyError, notifySuccess } from "@/components/ui/toast";
 
 interface ClassesManagementClientProps {
   initialClasses: SchoolClass[];
@@ -58,7 +57,6 @@ export function ClassesManagementClient({
   const [selectedYear, setSelectedYear] = useState<string>("all");
 
   const [isPending, startTransition] = useTransition();
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Modals
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -88,7 +86,7 @@ export function ClassesManagementClient({
 
   function handleCreateClass() {
     if (!createName.trim()) {
-      setFeedback({ type: "error", message: "Class name is required." });
+      notifyError("Class name is required.");
       return;
     }
 
@@ -104,13 +102,13 @@ export function ClassesManagementClient({
 
       const result = await createClassAction(formData);
       if (result.success) {
-        setFeedback({ type: "success", message: result.message });
+        notifySuccess(result.message);
         setIsCreateOpen(false);
         setCreateName("");
         setCreateStream("");
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: result.message });
+        notifyError(result.message);
       }
     });
   }
@@ -128,12 +126,12 @@ export function ClassesManagementClient({
 
       const result = await updateClassAction(formData);
       if (result.success) {
-        setFeedback({ type: "success", message: result.message });
+        notifySuccess(result.message);
         setEditModalClass(null);
         setClassOverrides((current) => ({ ...current, [editModalClass.id]: editModalClass }));
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: result.message });
+        notifyError(result.message);
       }
     });
   }
@@ -147,7 +145,7 @@ export function ClassesManagementClient({
 
       const result = await assignClassTeacherAction(formData);
       if (result.success) {
-        setFeedback({ type: "success", message: result.message });
+        notifySuccess(result.message);
         const teacherObj = teachers.find((teacher) => teacher.id === selectedTeacherId) || undefined;
         setClassOverrides((current) => ({
           ...current,
@@ -160,7 +158,7 @@ export function ClassesManagementClient({
         setTeacherModalClass(null);
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: result.message });
+        notifyError(result.message);
       }
     });
   }
@@ -180,13 +178,13 @@ export function ClassesManagementClient({
 
       const result = await toggleClassActiveAction(formData);
       if (result.success) {
-        setFeedback({ type: "success", message: result.message });
+        notifySuccess(result.message);
         setClassOverrides((current) => ({
           ...current,
           [c.id]: { ...c, is_active: nextActive },
         }));
       } else {
-        setFeedback({ type: "error", message: result.message });
+        notifyError(result.message);
       }
     });
   }
@@ -197,7 +195,7 @@ export function ClassesManagementClient({
     startTransition(async () => {
       const result = await deleteClassPermanentlyAction(c.id);
       if (result.success) {
-        setFeedback({ type: "success", message: result.message });
+        notifySuccess(result.message);
         setClassOverrides((current) => {
           const next = { ...current };
           delete next[c.id];
@@ -205,36 +203,13 @@ export function ClassesManagementClient({
         });
         router.refresh();
       } else {
-        setFeedback({ type: "error", message: result.message });
+        notifyError(result.message);
       }
     });
   }
 
   return (
     <div className="space-y-6">
-      {/* Feedback banner */}
-      {feedback && (
-        <div
-          className={`flex items-center justify-between p-4 rounded-lg border text-sm ${
-            feedback.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-red-50 border-red-200 text-red-800"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {feedback.type === "success" ? (
-              <CheckCircle2 className="size-5 text-emerald-600" />
-            ) : (
-              <AlertCircle className="size-5 text-red-600" />
-            )}
-            <span>{feedback.message}</span>
-          </div>
-          <Button variant="ghost" size="xs" onClick={() => setFeedback(null)}>
-            Dismiss
-          </Button>
-        </div>
-      )}
-
       {/* Action Header & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
