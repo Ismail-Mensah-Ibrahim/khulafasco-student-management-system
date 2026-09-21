@@ -48,14 +48,14 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
           <StatCard label="Total Students" value={String(metrics.totalStudents)} icon={Users} color="var(--brand-primary)" bg="var(--brand-accent)" />
-          <StatCard label="Amount Due" value={formatCurrency(metrics.amountDue)} icon={DollarSign} color="var(--brand-primary)" bg="var(--brand-accent)" prefix="GH₵" />
-          <StatCard label="Total Collected" value={formatCurrency(metrics.totalCollected)} icon={TrendingUp} color="var(--success)" bg="var(--success-light)" prefix="GH₵" />
-          <StatCard label="Outstanding Balance" value={formatCurrency(metrics.outstandingBalance)} icon={AlertCircle} color="var(--warning)" bg="var(--warning-light)" prefix="GH₵" />
+          <StatCard label="Amount Due" value={formatCurrency(metrics.amountDue)} icon={DollarSign} color="var(--brand-primary)" bg="var(--brand-accent)" />
+          <StatCard label="Total Collected" value={formatCurrency(metrics.totalCollected)} icon={TrendingUp} color="var(--success)" bg="var(--success-light)" />
+          <StatCard label="Outstanding Balance" value={formatCurrency(metrics.outstandingBalance)} icon={AlertCircle} color="var(--warning)" bg="var(--warning-light)" />
         </section>
 
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
           <StatCard label="Fully Paid" value={String(metrics.fullyPaid)} icon={CheckCircle2} color="var(--success)" bg="var(--success-light)" />
           <StatCard label="Partially Paid" value={String(metrics.partiallyPaid)} icon={TrendingUp} color="var(--warning)" bg="var(--warning-light)" />
           <StatCard label="Unpaid" value={String(metrics.unpaid)} icon={AlertCircle} color="var(--destructive)" bg="var(--destructive-light)" />
@@ -292,14 +292,13 @@ export default async function DashboardPage() {
           style={{ color: "var(--muted-foreground)" }}>
           Finance
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
           <StatCard
             label="Total Expected"
             value={formatCurrency(metrics.amountDue)}
             icon={DollarSign}
             color="var(--brand-primary)"
             bg="var(--brand-accent)"
-            prefix="GH₵"
           />
           <StatCard
             label="Total Collected"
@@ -307,7 +306,6 @@ export default async function DashboardPage() {
             icon={TrendingUp}
             color="var(--success)"
             bg="var(--success-light)"
-            prefix="GH₵"
           />
           <StatCard
             label="Outstanding"
@@ -315,7 +313,6 @@ export default async function DashboardPage() {
             icon={AlertCircle}
             color="var(--warning)"
             bg="var(--warning-light)"
-            prefix="GH₵"
           />
           <StatCard
             label="Fully Paid"

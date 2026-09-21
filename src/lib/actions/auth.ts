@@ -183,7 +183,7 @@ export async function loginAction(
     case "teacher":
       redirect("/teacher/dashboard");
     case "finance_officer":
-      redirect("/finance");
+      redirect("/dashboard");
     case "domestic_officer":
       redirect("/operations/dashboard");
     case "general_staff":
