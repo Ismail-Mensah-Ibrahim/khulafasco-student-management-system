@@ -31,7 +31,7 @@ import type {
   TeacherAssignment,
   TimetableEntry,
 } from "@/types";
-import type { Gender, UserRole, HouseResponsibility, TimetableDay } from "@/config/constants";
+import type { Gender, UserRole, HouseResponsibility, TimetableDay, PaymentMethodValue } from "@/config/constants";
 import { getHouseDistributionData, type HouseDistributionItem } from "@/lib/services/house-allocation";
 
 export interface DashboardProgramStat {
@@ -58,6 +58,19 @@ export interface DashboardSummary {
   houseStats: DashboardHouseStat[];
 }
 
+export interface PaymentBreakdownItem {
+  method: PaymentMethodValue;
+  label: string;
+  total: number;
+  count: number;
+}
+
+export interface FeeTypeTotalItem {
+  name: string;
+  total: number;
+  count: number;
+}
+
 export interface FinanceDashboardMetrics {
   totalStudents: number;
   amountDue: number;
@@ -69,6 +82,8 @@ export interface FinanceDashboardMetrics {
   notSet: number;
   todayPaymentCount: number;
   todayCollected: number;
+  paymentBreakdown: PaymentBreakdownItem[];
+  feeTypeTotals: FeeTypeTotalItem[];
 }
 
 export interface StudentQueryFilters {
@@ -635,7 +650,7 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
 
   const [studentsResult, paymentsResult] = await Promise.allSettled([
     studentQuery,
-    supabase.from("payments").select("student_id, amount, paid_at, status").order("paid_at", { ascending: false }),
+    supabase.from("payments").select("student_id, amount, paid_at, status, payment_method").order("paid_at", { ascending: false }),
   ]);
 
   const studentsQuery = studentsResult.status === "fulfilled" ? studentsResult.value : null;
@@ -661,6 +676,20 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
 
   const studentRows = studentsQuery?.data ?? [];
   const paymentRows = paymentsQuery?.data ?? [];
+  const chargesResult = await supabase
+    .from("student_charges")
+    .select("amount, academic_year_id, fee_type_id, fee_types(name)")
+    .order("created_at", { ascending: false });
+
+  const chargeRows = chargesResult.data ?? [];
+
+  const paymentBreakdownMap = new Map<PaymentMethodValue, { total: number; count: number }>([
+    ["cash", { total: 0, count: 0 }],
+    ["mobile_money", { total: 0, count: 0 }],
+    ["bank_transfer", { total: 0, count: 0 }],
+    ["other", { total: 0, count: 0 }],
+  ]);
+  const feeTypeMap = new Map<string, { total: number; count: number }>();
 
   const totalStudents = studentRows.length;
   let amountDue = 0;
@@ -680,9 +709,32 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
   for (const payment of paymentRows.filter((row: { status?: string; student_id?: string; amount?: number | string; paid_at?: string }) => row.status === "completed")) {
     const studentId = payment.student_id as string;
     const amount = Number(payment.amount ?? 0);
+    const method = (payment.payment_method ?? "other") as PaymentMethodValue;
     totalCollected += amount;
 
+    const currentBreakdown = paymentBreakdownMap.get(method) ?? { total: 0, count: 0 };
+    paymentBreakdownMap.set(method, {
+      total: currentBreakdown.total + amount,
+      count: currentBreakdown.count + 1,
+    });
+
     studentPaid.set(studentId, (studentPaid.get(studentId) ?? 0) + amount);
+  }
+
+  for (const charge of chargeRows) {
+    const academicYearId = typeof charge.academic_year_id === "string" ? charge.academic_year_id : null;
+    if (currentAcademicYear?.id && academicYearId && academicYearId !== currentAcademicYear.id) {
+      continue;
+    }
+
+    const feeName = (charge as { fee_types?: { name?: string } | null }).fee_types?.name ?? "Uncategorized Fee";
+    const currentFeeTotal = feeTypeMap.get(feeName) ?? { total: 0, count: 0 };
+    const amount = Number(charge.amount ?? 0);
+
+    feeTypeMap.set(feeName, {
+      total: currentFeeTotal.total + amount,
+      count: currentFeeTotal.count + 1,
+    });
   }
 
   for (const student of studentRows) {
@@ -712,6 +764,17 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
     .filter((row: { status?: string; paid_at?: string; amount?: number | string }) => row.status === "completed" && row.paid_at && row.paid_at >= startToday && row.paid_at < endTomorrow)
     .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
 
+  const paymentBreakdown: PaymentBreakdownItem[] = [
+    { method: "cash", label: "Cash", ...paymentBreakdownMap.get("cash") ?? { total: 0, count: 0 } },
+    { method: "mobile_money", label: "Mobile Money", ...paymentBreakdownMap.get("mobile_money") ?? { total: 0, count: 0 } },
+    { method: "bank_transfer", label: "Bank Transfer", ...paymentBreakdownMap.get("bank_transfer") ?? { total: 0, count: 0 } },
+    { method: "other", label: "Other", ...paymentBreakdownMap.get("other") ?? { total: 0, count: 0 } },
+  ];
+
+  const feeTypeTotals: FeeTypeTotalItem[] = Array.from(feeTypeMap.entries())
+    .map(([name, value]) => ({ name, total: value.total, count: value.count }))
+    .sort((a, b) => b.total - a.total);
+
   return {
     totalStudents,
     amountDue,
@@ -723,6 +786,8 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
     notSet,
     todayPaymentCount,
     todayCollected,
+    paymentBreakdown,
+    feeTypeTotals,
   };
 }
 

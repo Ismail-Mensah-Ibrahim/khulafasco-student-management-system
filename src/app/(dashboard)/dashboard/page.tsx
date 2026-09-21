@@ -65,6 +65,54 @@ export default async function DashboardPage() {
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
             <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>Payment Method Breakdown</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "var(--brand-accent)", color: "var(--brand-primary)" }}>
+                All Payment Types
+              </span>
+            </div>
+            <div className="space-y-3">
+              {metrics.paymentBreakdown.map((item) => (
+                <div key={item.method} className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>{item.label}</p>
+                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{item.count} payment{item.count === 1 ? "" : "s"}</p>
+                  </div>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
+                    {formatCurrency(item.total)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>Fee Type Totals</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "var(--brand-accent)", color: "var(--brand-primary)" }}>
+                Active Charges
+              </span>
+            </div>
+            <div className="space-y-3">
+              {metrics.feeTypeTotals.length === 0 ? (
+                <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>No fee charges have been recorded yet.</p>
+              ) : (
+                metrics.feeTypeTotals.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+                    <div>
+                      <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>{item.name}</p>
+                      <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{item.count} charge{item.count === 1 ? "" : "s"}</p>
+                    </div>
+                    <span className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
+                      {formatCurrency(item.total)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
+            <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm" style={{ color: "var(--foreground)" }}>Finance Priority Items</h3>
               <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "var(--warning-light)", color: "var(--warning)" }}>
                 Attention Needed
