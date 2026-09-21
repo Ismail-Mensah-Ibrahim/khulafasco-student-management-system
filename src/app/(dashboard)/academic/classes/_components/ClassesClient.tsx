@@ -36,7 +36,7 @@ import {
   assignTeacherAction,
   removeTeacherAssignmentAction,
 } from "@/lib/actions/academics";
-import { createClassAction, updateClassAction } from "@/lib/actions/academic-lifecycle";
+import { createClassAction, updateClassAction, deleteClassPermanentlyAction } from "@/lib/actions/academic-lifecycle";
 import { FORM_LEVELS } from "@/config/constants";
 
 interface ClassesClientProps {
@@ -176,6 +176,16 @@ export function ClassesClient({
       } else {
         setFeedback({ type: "error", message: res.message });
       }
+    });
+  }
+
+  function handleDeleteClass(cls: SchoolClass) {
+    if (!confirm(`Permanently delete "${cls.name}"? This removes all class-linked records and cannot be undone.`)) return;
+
+    startTransition(async () => {
+      const res = await deleteClassPermanentlyAction(cls.id);
+      setFeedback({ type: res.success ? "success" : "error", message: res.message });
+      if (res.success) router.refresh();
     });
   }
 
@@ -548,6 +558,16 @@ export function ClassesClient({
                           title="Edit class"
                         >
                           <Edit2 className="size-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => handleDeleteClass(cls)}
+                          disabled={isPending}
+                          className="text-destructive hover:bg-destructive/10"
+                          title="Permanently delete class"
+                        >
+                          <Trash2 className="size-3" />
                         </Button>
                       </div>
                     </div>

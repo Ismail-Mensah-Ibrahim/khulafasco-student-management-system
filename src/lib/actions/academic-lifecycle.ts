@@ -445,3 +445,27 @@ export async function toggleClassActiveAction(formData: FormData): Promise<Acade
 
   return { success: true, message: `Class is now ${shouldBeActive ? "Active" : "Archived"}.` };
 }
+
+export async function deleteClassPermanentlyAction(classId: string): Promise<AcademicLifecycleResult> {
+  await requireAcademicOrAdmin();
+  const supabase = await createClient();
+
+  if (!classId.trim()) return { success: false, message: "Class ID is required." };
+
+  const { error } = await supabase.rpc("delete_class_permanently", { p_class_id: classId.trim() });
+  if (error) {
+    console.error("deleteClassPermanentlyAction error:", error);
+    return { success: false, message: error.message.includes("Class not found") ? "Class no longer exists." : "Failed to permanently delete class." };
+  }
+
+  revalidatePath("/admin/classes");
+  revalidatePath("/academic/classes");
+  revalidatePath("/academic/dashboard");
+  revalidatePath("/academic/results");
+  revalidatePath("/academic/timetable");
+  revalidatePath("/teacher/dashboard");
+  revalidatePath("/teacher/attendance");
+  revalidatePath("/teacher/results");
+  revalidatePath("/teacher/timetable");
+  return { success: true, message: "Class and all class-linked records were permanently deleted." };
+}
