@@ -538,16 +538,19 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
   const oldResponsibility = (currentProfile as { house_responsibility?: string | null }).house_responsibility;
   const oldHouseId = currentProfile.house_id;
 
-  // Determine final house_id based on responsibility
+  // Determine final house_id based on responsibility.
+  // Senior house oversight is school-wide and does not require a specific house assignment.
+  const isSeniorHouseResponsibility =
+    validResponsibility === "senior_house_master" || validResponsibility === "senior_house_mistress";
+
   let finalHouseId: string | null = null;
-  if (validResponsibility === "house_master" || validResponsibility === "house_mistress" || newRole === "house_master" || newRole === "house_mistress") {
+  if (isSeniorHouseResponsibility) {
+    finalHouseId = null;
+  } else if (validResponsibility === "house_master" || validResponsibility === "house_mistress" || newRole === "house_master" || newRole === "house_mistress") {
     finalHouseId = houseIdInput;
     if (!finalHouseId) {
       return { success: false, message: "Please select a residential house for the House Master/Mistress responsibility." };
     }
-  } else if (validResponsibility === "senior_house_master" || validResponsibility === "senior_house_mistress") {
-    // Senior house staff have school-wide oversight of all houses
-    finalHouseId = null;
   }
 
   // Update profile
