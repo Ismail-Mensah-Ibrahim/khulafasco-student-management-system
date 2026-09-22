@@ -8,6 +8,7 @@ import { formatDate, getFullName } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { GENDER_LABELS, hasRole } from '@/config/constants';
 import { DeleteStudentDialog } from './_components/DeleteStudentDialog';
+import { StudentAvatar } from '@/components/shared/StudentAvatar';
 
 export async function generateMetadata({ params }: { params: Promise<{ jhs_index_number: string }> }): Promise<Metadata> {
   const { jhs_index_number } = await params;
@@ -80,30 +81,36 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           {/* Photograph container */}
           <div className="col-span-1">
             {student.photo_path ? (
-              <div className="w-full rounded-xl overflow-hidden border shadow-xs" style={{ borderColor: 'var(--border)' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={student.photo_path.startsWith('data:') ? student.photo_path : `/api/student-photo/${encodeURIComponent(student.jhs_index_number)}`}
-                  alt={`${fullName} photo`}
-                  className="w-full h-72 object-cover"
+              <div className="w-full h-72 rounded-xl overflow-hidden border shadow-xs" style={{ borderColor: 'var(--border)' }}>
+                <StudentAvatar
+                  jhsIndexNumber={student.jhs_index_number}
+                  firstName={student.first_name}
+                  lastName={student.last_name}
+                  photoPath={student.photo_path}
+                  size="xl"
+                  className="w-full h-full rounded-none border-0 text-5xl"
                 />
-
               </div>
             ) : (
-              <div className="w-full h-72 rounded-xl border border-dashed flex flex-col items-center justify-center p-4 text-center bg-muted/20" style={{ borderColor: 'var(--border)' }}>
-                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2 text-muted-foreground">
-                  <User className="w-6 h-6" />
-                </div>
-                <p className="text-xs font-semibold text-muted-foreground">No photograph on file</p>
-                {isAdmin ? (
-                  <Link
-                    href={`/students/${encodeURIComponent(student.jhs_index_number)}/edit`}
-                    className="mt-3 text-xs font-medium text-brand-primary underline underline-offset-4"
-                  >
-                    Add photograph
-                  </Link>
-                ) : null}
+              <div className="w-full h-72 rounded-xl border shadow-xs flex items-center justify-center bg-muted/20" style={{ borderColor: 'var(--border)' }}>
+                <StudentAvatar
+                  jhsIndexNumber={student.jhs_index_number}
+                  firstName={student.first_name}
+                  lastName={student.last_name}
+                  photoPath={null}
+                  size="xl"
+                  className="w-full h-full rounded-none border-0 text-5xl"
+                />
               </div>
+            )}
+
+            {!student.photo_path && (
+              <Link
+                href={`/students/${encodeURIComponent(student.jhs_index_number)}/edit`}
+                className="mt-3 inline-block text-xs font-medium text-brand-primary underline underline-offset-4"
+              >
+                Add photograph
+              </Link>
             )}
           </div>
 

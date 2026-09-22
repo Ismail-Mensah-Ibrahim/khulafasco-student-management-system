@@ -199,9 +199,49 @@
    Print — receipt-friendly
    ============================================================ */
 @media print {
-  body { background: white; color: black; font-size: 12pt; }
-  .no-print { display: none !important; }
-  .print-only { display: block !important; }
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  .no-print,
+  [class*="print:hidden"],
+  button,
+  a[href],
+  form,
+  .sr-only {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .shadow-xs,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl {
+    box-shadow: none !important;
+  }
+
+  .rounded-xl,
+  .rounded-lg,
+  .rounded-md,
+  .rounded-full {
+    border-radius: 0 !important;
+  }
 }
 
 /* ============================================================

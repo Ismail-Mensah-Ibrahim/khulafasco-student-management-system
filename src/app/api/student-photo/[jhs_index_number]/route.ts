@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { getStudentByJhsIndexNumber } from '@/lib/data';
 import { getOptionalSession } from '@/lib/dal';
+import { hasRole } from '@/config/constants';
 
 function contentTypeFromPath(path: string | null): string {
   if (!path) return 'application/octet-stream';
@@ -35,14 +36,15 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ jhs_in
     // Strict Role Authorization:
     // - Global staff (Admin, Headmaster, Academic Head, Finance, Teacher, IT) have school-wide photo access.
     // - House Master & House Mistress are strictly restricted to students in their assigned house.
-    const isGlobalStaff = ['admin', 'headmaster', 'academic_head', 'finance_officer', 'teacher', 'it_officer'].includes(session.role);
-    const isHouseStaff = session.role === 'house_master' || session.role === 'house_mistress';
+    const isGlobalStaff = ['admin', 'headmaster', 'academic_head', 'finance_officer', 'teacher', 'it_officer']
+      .some((role) => hasRole(session.role, session.additionalRoles, role as typeof session.role));
+    const isHouseStaff = hasRole(session.role, session.additionalRoles, 'house_master') || hasRole(session.role, session.additionalRoles, 'house_mistress') || Boolean(session.houseResponsibility);
 
     if (!isGlobalStaff && !isHouseStaff) {
       return new Response('Forbidden', { status: 403 });
     }
 
-    if (isHouseStaff) {
+    if (isHouseStaff && !isGlobalStaff && !session.houseResponsibility?.startsWith('senior_')) {
       if (!session.houseId || student.house_id !== session.houseId) {
         return new Response('Forbidden: Student not in your assigned house', { status: 403 });
       }

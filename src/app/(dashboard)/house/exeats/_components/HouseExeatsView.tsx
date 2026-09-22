@@ -26,6 +26,7 @@ import { StudentAvatar } from "@/components/shared/StudentAvatar";
 import type { HouseDashboardData } from "@/lib/data";
 import type { House, HouseExeatRecord } from "@/types";
 import { createHouseExeatAction, returnHouseExeatAction } from "@/lib/actions/house";
+import { notifyError, notifySuccess } from "@/components/ui/toast";
 
 interface HouseExeatsViewProps {
   data: HouseDashboardData;
@@ -47,7 +48,6 @@ export function HouseExeatsView({
   const [activeTab, setActiveTab] = useState<"all" | "active" | "returned" | "overdue">("active");
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -100,12 +100,11 @@ export function HouseExeatsView({
     if (!house) return;
 
     if (!selectedStudentId || !reason || !expectedReturnDate) {
-      setFeedback({ type: "error", message: "Please fill all required fields." });
+      notifyError("Please fill all required fields.");
       return;
     }
 
     startTransition(async () => {
-      setFeedback(null);
       const formData = new FormData();
       formData.set("student_id", selectedStudentId);
       formData.set("house_id", house.id);
@@ -117,7 +116,7 @@ export function HouseExeatsView({
 
       const res = await createHouseExeatAction(formData);
       if (res.success) {
-        setFeedback({ type: "success", message: res.message || "Exeat issued successfully." });
+        notifySuccess(res.message || "Exeat issued successfully.");
         setIsDialogOpen(false);
         // Reset form
         setSelectedStudentId("");
@@ -126,17 +125,16 @@ export function HouseExeatsView({
         setParentContacted(false);
         setRemarks("");
       } else {
-        setFeedback({ type: "error", message: res.error || "Failed to issue exeat." });
+        notifyError(res.error || "Failed to issue exeat.");
       }
     });
   }
 
   function handleMarkReturned(exeatId: string) {
     startTransition(async () => {
-      setFeedback(null);
       const res = await returnHouseExeatAction(exeatId);
       if (res.success) {
-        setFeedback({ type: "success", message: res.message || "Student marked as returned." });
+        notifySuccess(res.message || "Student marked as returned.");
         setExeats((prev) =>
           prev.map((item) =>
             item.id === exeatId
@@ -145,7 +143,7 @@ export function HouseExeatsView({
           )
         );
       } else {
-        setFeedback({ type: "error", message: res.error || "Failed to update exeat." });
+        notifyError(res.error || "Failed to update exeat.");
       }
     });
   }
@@ -225,21 +223,6 @@ export function HouseExeatsView({
               );
             })}
           </div>
-        </div>
-      )}
-
-      {feedback && (
-        <div
-          className={`p-3.5 rounded-xl border text-sm flex items-center justify-between ${
-            feedback.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-destructive/10 border-destructive/20 text-destructive"
-          }`}
-        >
-          <span>{feedback.message}</span>
-          <button onClick={() => setFeedback(null)} className="text-xs font-bold hover:underline ml-3">
-            Dismiss
-          </button>
         </div>
       )}
 
