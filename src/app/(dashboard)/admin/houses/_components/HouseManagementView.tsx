@@ -46,6 +46,11 @@ import {
   type RebalancePlan,
 } from "@/lib/services/house-allocation";
 import type { HouseStudentRosterItem } from "@/lib/data";
+import { notifyError, notifySuccess } from "@/components/ui/toast";
+
+function csvCell(value: string | null | undefined): string {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
 
 interface HouseManagementViewProps {
   distributions: HouseDistributionItem[];
@@ -64,7 +69,7 @@ export function HouseManagementView({
   // Edit House Modal State
   const [editingHouse, setEditingHouse] = useState<HouseDistributionItem | null>(null);
 
-  // Rebalance Wizard Modal State (4 Steps: 1=Preview, 2=Review, 3=Confirm, 4=Executing)
+  // Rebalance Wizard Modal State
   const [isRebalanceOpen, setIsRebalanceOpen] = useState(false);
   const [rebalanceStep, setRebalanceStep] = useState<1 | 2 | 3>(1);
   const [rebalancePlan, setRebalancePlan] = useState<RebalancePlan | null>(null);
@@ -74,12 +79,6 @@ export function HouseManagementView({
   const [selectedHouseTab, setSelectedHouseTab] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [genderFilter, setGenderFilter] = useState<"all" | "male" | "female">("all");
-
-  // Status message
-  const [statusMessage, setStatusMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   // Aggregated stats
   const totalHouses = distributions.length;
@@ -98,9 +97,7 @@ export function HouseManagementView({
 
   // Open Rebalance Simulation Wizard
   function handleOpenRebalance() {
-    setStatusMessage(null);
     setConfirmedAuth(false);
-    setRebalanceStep(1);
     const plan = computeHouseRebalance(students, distributions);
     setRebalancePlan(plan);
     setIsRebalanceOpen(true);
@@ -115,8 +112,8 @@ export function HouseManagementView({
         studentId: m.studentId,
         toHouseId: m.toHouseId,
         fromHouseId: m.fromHouseId,
-        studentName: m.studentName,
         jhsIndexNumber: m.jhsIndexNumber,
+        studentName: m.studentName,
       }));
 
       const res = await rebalanceHousesAction(payload);
@@ -125,9 +122,9 @@ export function HouseManagementView({
       setConfirmedAuth(false);
 
       if (res.success) {
-        setStatusMessage({ type: "success", text: res.message });
+        notifySuccess(res.message);
       } else {
-        setStatusMessage({ type: "error", text: res.message });
+        notifyError(res.message);
       }
     });
   }
@@ -142,9 +139,9 @@ export function HouseManagementView({
       setEditingHouse(null);
 
       if (res.success) {
-        setStatusMessage({ type: "success", text: res.message });
+        notifySuccess(res.message);
       } else {
-        setStatusMessage({ type: "error", text: res.message });
+        notifyError(res.message);
       }
     });
   }
@@ -181,22 +178,24 @@ export function HouseManagementView({
   function handleExportCSV() {
     const headers = ["JHS Index Number", "Full Name", "Gender", "House", "Program", "Status"];
     const rows = filteredStudents.map((s) => [
-      `"${s.jhsIndexNumber}"`,
-      `"${s.fullName}"`,
-      s.gender.toUpperCase(),
-      `"${s.houseName}"`,
-      `"${s.programName || "General"}"`,
-      s.enrollmentStatus.toUpperCase(),
+      csvCell(s.jhsIndexNumber),
+      csvCell(s.fullName),
+      csvCell(s.gender.toUpperCase()),
+      csvCell(s.houseName),
+      csvCell(s.programName || "General"),
+      csvCell(s.enrollmentStatus.toUpperCase()),
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((e) => e.join(","))].join("\r\n");
+    const encodedUri = URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", `khulafasco-house-roster-${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(encodedUri);
+    notifySuccess(`Exported ${filteredStudents.length} roster record${filteredStudents.length === 1 ? "" : "s"}.`);
   }
 
   // Print Roster
@@ -206,35 +205,6 @@ export function HouseManagementView({
 
   return (
     <div className="space-y-6">
-      {/* Alert Banner */}
-      {statusMessage && (
-        <div
-          role="alert"
-          className={`p-4 rounded-xl border text-sm flex items-center justify-between ${
-            statusMessage.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-destructive/10 border-destructive/30 text-destructive"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {statusMessage.type === "success" ? (
-              <CheckCircle2 className="size-5 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertTriangle className="size-5 text-destructive shrink-0" />
-            )}
-            <span>{statusMessage.text}</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setStatusMessage(null)}
-            className="h-7 text-xs"
-          >
-            Dismiss
-          </Button>
-        </div>
-      )}
-
       {/* School-Wide Population & Allocation Overview Banner */}
       <div className="bg-muted/30 border border-border rounded-xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1">

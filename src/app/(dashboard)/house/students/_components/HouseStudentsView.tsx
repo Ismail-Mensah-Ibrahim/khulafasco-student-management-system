@@ -16,6 +16,11 @@ import { Input } from "@/components/ui/input";
 import { StudentAvatar } from "@/components/shared/StudentAvatar";
 import type { HouseDashboardData } from "@/lib/data";
 import type { House } from "@/types";
+import { notifySuccess } from "@/components/ui/toast";
+
+function csvCell(value: string | null | undefined): string {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
 
 interface HouseStudentsViewProps {
   data: HouseDashboardData;
@@ -68,25 +73,27 @@ export function HouseStudentsView({
     ];
 
     const rows = filteredStudents.map((s) => [
-      `"${s.jhsIndexNumber}"`,
-      `"${s.fullName}"`,
-      `"${s.gender}"`,
-      `"${house.name}"`,
-      `"${s.programName || "General"}"`,
-      `"${s.studentType || "Boarding"}"`,
-      `"${s.parentName || ""}"`,
-      `"${s.parentPhone || ""}"`,
-      `"${s.enrollmentStatus}"`,
+      csvCell(s.jhsIndexNumber),
+      csvCell(s.fullName),
+      csvCell(s.gender),
+      csvCell(house.name),
+      csvCell(s.programName || "General"),
+      csvCell(s.studentType || "Boarding"),
+      csvCell(s.parentName),
+      csvCell(s.parentPhone),
+      csvCell(s.enrollmentStatus),
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((e) => e.join(","))].join("\r\n");
+    const encodedUri = URL.createObjectURL(new Blob([csvContent], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", `house_${house.name.toLowerCase()}_students_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(encodedUri);
+    notifySuccess(`Exported ${filteredStudents.length} student record${filteredStudents.length === 1 ? "" : "s"}.`);
   }
 
   if (!isAssigned || !house) {
@@ -100,7 +107,7 @@ export function HouseStudentsView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link
@@ -144,7 +151,7 @@ export function HouseStudentsView({
 
       {/* Scope Switcher for Senior House Staff & Admin */}
       {allHouses.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap print:hidden">
           <span className="text-xs text-muted-foreground font-medium">Scope:</span>
           <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-lg border border-border flex-wrap">
             <Link
@@ -179,7 +186,7 @@ export function HouseStudentsView({
 
       {/* Main Roster Card */}
       <Card className="border-border shadow-xs">
-        <CardHeader className="pb-3 border-b border-border">
+        <CardHeader className="pb-3 border-b border-border print:hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SCHOOL } from "@/config/branding";
 import { requireHouseStaff } from "@/lib/dal";
+import { hasRole } from "@/config/constants";
 import { getHouseDashboardData, getHouses } from "@/lib/data";
 import { HouseDashboardView } from "./_components/HouseDashboardView";
 
@@ -18,7 +19,7 @@ export default async function HouseDashboardPage({
   const overrideHouseId = typeof params.houseId === "string" ? params.houseId : undefined;
 
   const isSenior =
-    session.role === "admin" ||
+    hasRole(session.role, session.additionalRoles, "admin") ||
     session.houseResponsibility === "senior_house_master" ||
     session.houseResponsibility === "senior_house_mistress";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import Link from "next/link";
 import {
   Home,
@@ -21,6 +21,7 @@ import { StudentAvatar } from "@/components/shared/StudentAvatar";
 import type { HouseDashboardData } from "@/lib/data";
 import type { House } from "@/types";
 import { returnHouseExeatAction } from "@/lib/actions/house";
+import { notifyError, notifySuccess } from "@/components/ui/toast";
 
 interface HouseDashboardViewProps {
   data: HouseDashboardData;
@@ -37,7 +38,6 @@ export function HouseDashboardView({
   allHouses = [],
 }: HouseDashboardViewProps) {
   const [isPending, startTransition] = useTransition();
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const {
     house,
@@ -65,12 +65,11 @@ export function HouseDashboardView({
 
   function handleMarkReturned(exeatId: string) {
     startTransition(async () => {
-      setFeedback(null);
       const res = await returnHouseExeatAction(exeatId);
       if (res.success) {
-        setFeedback({ type: "success", message: res.message || "Student marked as returned." });
+        notifySuccess(res.message || "Student marked as returned.");
       } else {
-        setFeedback({ type: "error", message: res.error || "Failed to update exeat." });
+        notifyError(res.error || "Failed to update exeat.");
       }
     });
   }
@@ -171,21 +170,6 @@ export function HouseDashboardView({
         )}
       </div>
 
-
-      {feedback && (
-        <div
-          className={`p-3.5 rounded-xl border text-sm flex items-center justify-between ${
-            feedback.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-destructive/10 border-destructive/20 text-destructive"
-          }`}
-        >
-          <span>{feedback.message}</span>
-          <button onClick={() => setFeedback(null)} className="text-xs font-bold hover:underline ml-3">
-            Dismiss
-          </button>
-        </div>
-      )}
 
       {/* KPI Stats Cards */}
       <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">

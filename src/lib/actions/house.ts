@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireHouseStaff, requireAdmin } from "@/lib/dal";
+import { hasRole } from "@/config/constants";
 
 /**
  * Issue a new exeat (leave of absence) for a student in the staff's house.
@@ -32,7 +33,7 @@ export async function createHouseExeatAction(formData: FormData): Promise<{
     // Senior house staff and Admins can manage exeats across all houses.
     // House Masters and Mistresses are strictly bounded to their assigned house.
     const isSeniorOrAdmin =
-      session.role === "admin" ||
+      hasRole(session.role, session.additionalRoles, "admin") ||
       session.houseResponsibility === "senior_house_master" ||
       session.houseResponsibility === "senior_house_mistress";
 
@@ -132,7 +133,7 @@ export async function returnHouseExeatAction(exeatId: string): Promise<{
 
     // Strict security check
     const isSeniorOrAdmin =
-      session.role === "admin" ||
+      hasRole(session.role, session.additionalRoles, "admin") ||
       session.houseResponsibility === "senior_house_master" ||
       session.houseResponsibility === "senior_house_mistress";
 

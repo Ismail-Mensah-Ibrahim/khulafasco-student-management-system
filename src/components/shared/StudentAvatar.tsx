@@ -32,7 +32,9 @@ export function StudentAvatar({
   size = "md",
   className = "",
 }: StudentAvatarProps) {
-  const [hasError, setHasError] = useState(false);
+  const [failedPhotoKey, setFailedPhotoKey] = useState<string | null>(null);
+  const photoKey = `${jhsIndexNumber}:${photoPath ?? ""}`;
+  const hasError = failedPhotoKey === photoKey;
 
   const initialFirst = firstName?.trim()?.[0]?.toUpperCase() || "";
   const initialLast = lastName?.trim()?.[0]?.toUpperCase() || "";
@@ -62,7 +64,7 @@ export function StudentAvatar({
           alt=""
           aria-hidden="true"
           loading="lazy"
-          onError={() => setHasError(true)}
+          onError={() => setFailedPhotoKey(photoKey)}
           className="w-full h-full object-cover rounded-full"
         />
       ) : (
