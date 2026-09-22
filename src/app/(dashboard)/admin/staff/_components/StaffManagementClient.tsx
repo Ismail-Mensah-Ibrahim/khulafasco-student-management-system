@@ -94,6 +94,9 @@ export function StaffManagementClient({
   const [checkingSafety, setCheckingSafety] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
+  const isSeniorHouseResponsibility =
+    newResponsibility === "senior_house_master" || newResponsibility === "senior_house_mistress";
+
   // Filtering
   const filteredStaff = staffList.filter((staff) => {
     const matchesSearch =
@@ -116,20 +119,27 @@ export function StaffManagementClient({
     setNewRole(staff.role);
     setAdditionalRoles(staff.additional_roles ?? []);
     setNewResponsibility(staff.house_responsibility || "");
-    setSelectedHouseId(staff.house_id || "");
+    setSelectedHouseId(
+      staff.house_responsibility === "senior_house_master" || staff.house_responsibility === "senior_house_mistress"
+        ? ""
+        : staff.house_id || ""
+    );
     setFeedback(null);
   }
 
   function handleSaveRole() {
     if (!roleModalStaff) return;
     const targetStaff = roleModalStaff;
+    const houseIdForSubmission =
+      isSeniorHouseResponsibility ? "" : selectedHouseId || "";
+
     startTransition(async () => {
       const formData = new FormData();
       formData.set("staff_id", targetStaff.id);
       formData.set("role", newRole);
       formData.set("additional_roles", JSON.stringify(additionalRoles));
       formData.set("house_responsibility", newResponsibility);
-      formData.set("house_id", selectedHouseId || "");
+      formData.set("house_id", houseIdForSubmission);
 
       const result = await updateStaffRoleAction(formData);
       if (result.success) {
@@ -642,30 +652,31 @@ export function StaffManagementClient({
               </select>
             </div>
 
-            {(newResponsibility === "house_master" ||
-              newResponsibility === "house_mistress" ||
-              newRole === "house_master" ||
-              newRole === "house_mistress") && (
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  Assign Residential House *
-                </label>
-                <select
-                  value={selectedHouseId}
-                  onChange={(e) => setSelectedHouseId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
-                >
-                  <option value="">-- Choose House --</option>
-                  {houses.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.name} ({h.code || h.name.slice(0, 3).toUpperCase()})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {!isSeniorHouseResponsibility &&
+              (newResponsibility === "house_master" ||
+                newResponsibility === "house_mistress" ||
+                newRole === "house_master" ||
+                newRole === "house_mistress") && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+                    Assign Residential House *
+                  </label>
+                  <select
+                    value={selectedHouseId}
+                    onChange={(e) => setSelectedHouseId(e.target.value)}
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">-- Choose House --</option>
+                    {houses.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name} ({h.code || h.name.slice(0, 3).toUpperCase()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-            {(newResponsibility === "senior_house_master" || newResponsibility === "senior_house_mistress") && (
+            {isSeniorHouseResponsibility && (
               <div className="p-2.5 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-900">
                 <p className="font-semibold">School-Wide House Oversight</p>
                 <p className="mt-0.5 text-indigo-700">
