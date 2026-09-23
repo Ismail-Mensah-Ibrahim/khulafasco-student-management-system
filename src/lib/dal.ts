@@ -142,14 +142,14 @@ export async function requireHeadmaster(): Promise<SessionUser> {
  * Verify session AND require Academic Head role.
  */
 export async function requireAcademicHead(): Promise<SessionUser> {
-  return requireRole(["academic_head", "headmaster", "admin"]);
+  return requireRole(["academic_head", "assistant_headmaster", "headmaster", "admin"]);
 }
 
 /**
  * Verify session AND require Teacher role.
  */
 export async function requireTeacher(): Promise<SessionUser> {
-  return requireRole(["teacher", "academic_head", "admin"]);
+  return requireRole(["teacher", "academic_head", "assistant_headmaster", "admin"]);
 }
 
 /**
@@ -220,7 +220,7 @@ export async function requireFinanceOrAdmin(): Promise<SessionUser> {
  * Verify session AND require academic_head or admin role.
  */
 export async function requireAcademicOrAdmin(): Promise<SessionUser> {
-  return requireRole(["academic_head", "admin"]);
+  return requireRole(["academic_head", "assistant_headmaster", "admin"]);
 }
 
 /**
