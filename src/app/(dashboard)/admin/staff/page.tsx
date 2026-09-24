@@ -47,7 +47,7 @@ export default async function StaffAccessPage() {
                 Provision Staff Account
               </h2>
               <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Create authorized system accounts across all 8 institutional roles.
+                Create authorized system accounts across institutional roles.
               </p>
             </div>
           </div>

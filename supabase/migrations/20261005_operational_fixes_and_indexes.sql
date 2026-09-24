@@ -110,6 +110,6 @@ WHERE p.id = au.id
 -- ────────────────────────────────────────────────────────────
 -- 6. Record this migration
 -- ────────────────────────────────────────────────────────────
-INSERT INTO public.schema_migrations (version, name, applied_at)
-VALUES ('20261005', 'operational_fixes_and_indexes', now())
+INSERT INTO supabase_migrations.schema_migrations (version, name)
+VALUES ('20261005_operational_fixes_and_indexes', 'operational_fixes_and_indexes')
 ON CONFLICT (version) DO NOTHING;

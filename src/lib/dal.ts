@@ -173,6 +173,8 @@ export async function requireHouseStaff(): Promise<SessionUser> {
   const session = await verifySession();
   const isAllowed =
     hasRole(session.role, session.additionalRoles, "admin") ||
+    hasRole(session.role, session.additionalRoles, "headmaster") ||
+    hasRole(session.role, session.additionalRoles, "assistant_headmaster") ||
     hasRole(session.role, session.additionalRoles, "house_master") ||
     hasRole(session.role, session.additionalRoles, "house_mistress") ||
     session.houseResponsibility === "house_master" ||
@@ -193,6 +195,8 @@ export async function requireSeniorHouseStaff(): Promise<SessionUser> {
   const session = await verifySession();
   const isAllowed =
     hasRole(session.role, session.additionalRoles, "admin") ||
+    hasRole(session.role, session.additionalRoles, "headmaster") ||
+    hasRole(session.role, session.additionalRoles, "assistant_headmaster") ||
     session.houseResponsibility === "senior_house_master" ||
     session.houseResponsibility === "senior_house_mistress";
 

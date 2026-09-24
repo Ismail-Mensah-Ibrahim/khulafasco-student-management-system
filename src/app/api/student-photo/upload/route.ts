@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getOptionalSession, requireAdmin } from "@/lib/dal";
+import { hasRole } from "@/config/constants";
 import {
   STUDENT_PHOTOS_BUCKET,
   removeStudentPhoto,
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Authentication required." }, { status: 401 });
   }
 
-  if (session.role !== "admin") {
+  if (!hasRole(session.role, session.additionalRoles, "admin")) {
     return Response.json({ error: "Admin access required." }, { status: 403 });
   }
 

@@ -35,7 +35,11 @@ export default async function AdminClassesPage() {
         academicYears={academicYears}
         programs={programs}
         teachers={teachers}
-        canManage={hasRole(session.role, session.additionalRoles, "admin") || hasRole(session.role, session.additionalRoles, "academic_head")}
+        canManage={
+          hasRole(session.role, session.additionalRoles, "admin") ||
+          hasRole(session.role, session.additionalRoles, "academic_head") ||
+          hasRole(session.role, session.additionalRoles, "assistant_headmaster")
+        }
       />
     </div>
   );

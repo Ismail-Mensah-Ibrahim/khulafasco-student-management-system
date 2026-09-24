@@ -57,7 +57,10 @@ export function RequestsClient({
 
   const [isPending, startTransition] = useTransition();
 
-  const isReviewer = hasRole(currentUser.role, currentUser.additionalRoles, "headmaster") || hasRole(currentUser.role, currentUser.additionalRoles, "admin");
+  const isReviewer =
+    hasRole(currentUser.role, currentUser.additionalRoles, "headmaster") ||
+    hasRole(currentUser.role, currentUser.additionalRoles, "assistant_headmaster") ||
+    hasRole(currentUser.role, currentUser.additionalRoles, "admin");
   const isFinance = hasRole(currentUser.role, currentUser.additionalRoles, "finance_officer") || hasRole(currentUser.role, currentUser.additionalRoles, "admin");
 
   const filteredRequests = requestsList.filter((req) => {

@@ -20,6 +20,8 @@ export default async function HouseStudentsPage({
 
   const isSenior =
     hasRole(session.role, session.additionalRoles, "admin") ||
+    hasRole(session.role, session.additionalRoles, "headmaster") ||
+    hasRole(session.role, session.additionalRoles, "assistant_headmaster") ||
     session.houseResponsibility === "senior_house_master" ||
     session.houseResponsibility === "senior_house_mistress";
 

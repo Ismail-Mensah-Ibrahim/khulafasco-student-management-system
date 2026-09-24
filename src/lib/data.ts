@@ -1729,6 +1729,7 @@ export async function getHouseDashboardData(
     const { data: allHousesData } = await supabase
       .from("houses")
       .select("*")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true });
 
     const allHouses = allHousesData || [];

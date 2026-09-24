@@ -24,6 +24,7 @@ export default async function RequestsPage({ searchParams }: RequestsPageProps) 
   // Finance Officer sees all requests to handle release/disbursements.
   const isReviewerOrFinance =
     hasRole(session.role, session.additionalRoles, "headmaster") ||
+    hasRole(session.role, session.additionalRoles, "assistant_headmaster") ||
     hasRole(session.role, session.additionalRoles, "admin") ||
     hasRole(session.role, session.additionalRoles, "finance_officer");
 

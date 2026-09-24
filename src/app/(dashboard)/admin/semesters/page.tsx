@@ -27,7 +27,11 @@ export default async function AdminSemestersPage() {
       <SemestersManagementClient
         initialSemesters={semesters}
         academicYears={academicYears}
-        canManage={hasRole(session.role, session.additionalRoles, "admin") || hasRole(session.role, session.additionalRoles, "academic_head")}
+        canManage={
+          hasRole(session.role, session.additionalRoles, "admin") ||
+          hasRole(session.role, session.additionalRoles, "academic_head") ||
+          hasRole(session.role, session.additionalRoles, "assistant_headmaster")
+        }
       />
     </div>
   );
