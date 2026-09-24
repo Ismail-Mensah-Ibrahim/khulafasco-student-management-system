@@ -300,6 +300,7 @@ export async function getHouses(options: { throwOnError?: boolean } = {}): Promi
   const { data, error } = await supabase
     .from("houses")
     .select("*")
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
 
   if (error) {

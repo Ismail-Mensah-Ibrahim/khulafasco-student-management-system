@@ -227,7 +227,7 @@ export async function requireAcademicOrAdmin(): Promise<SessionUser> {
  * Verify session AND require Headmaster or Admin (request reviewers).
  */
 export async function requireReviewer(): Promise<SessionUser> {
-  return requireRole(["headmaster", "admin"]);
+  return requireRole(["headmaster", "assistant_headmaster", "admin"]);
 }
 
 /**

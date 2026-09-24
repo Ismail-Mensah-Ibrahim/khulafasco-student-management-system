@@ -51,7 +51,7 @@ export async function recordAttendanceAction(
       notes: notes || null,
       recorded_by: session.id,
     },
-    { onConflict: "student_id,date" }
+    { onConflict: "student_id,class_id,date" }
   );
 
   if (error) {
@@ -381,6 +381,7 @@ export async function assignTeacherAction(formData: FormData): Promise<AcademicA
     teacherProfile?.is_active &&
       (teacherProfile.role === "admin" ||
         teacherProfile.role === "academic_head" ||
+        teacherProfile.role === "assistant_headmaster" ||
         teacherProfile.role === "teacher" ||
         teacherProfile.additional_roles?.includes("teacher"))
   );
@@ -518,6 +519,8 @@ export async function createTimetableEntryAction(formData: FormData): Promise<Ac
     end_time: endTime,
     room,
     is_published: false,
+    status: "draft",
+    updated_at: new Date().toISOString(),
   });
 
   if (error) {
@@ -652,7 +655,7 @@ export async function publishTimetableAction(formData: FormData): Promise<Academ
 
   let query = supabase
     .from("timetables")
-    .update({ is_published: true })
+    .update({ is_published: true, status: "published", published_at: new Date().toISOString(), published_by: session.id })
     .eq("academic_year_id", academicYearId);
 
   if (semesterId) query = query.eq("semester_id", semesterId);
@@ -693,7 +696,7 @@ export async function unpublishTimetableAction(formData: FormData): Promise<Acad
 
   let query = supabase
     .from("timetables")
-    .update({ is_published: false })
+    .update({ is_published: false, status: "draft", published_at: null, published_by: null })
     .eq("academic_year_id", academicYearId);
 
   if (semesterId) query = query.eq("semester_id", semesterId);

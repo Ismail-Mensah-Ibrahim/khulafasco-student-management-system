@@ -174,9 +174,13 @@ export async function loginAction(
     case "house_master":
     case "house_mistress":
       redirect("/house/dashboard");
+    case "senior_house_master":
+    case "senior_house_mistress":
+      redirect("/house/dashboard");
     case "it_officer":
       redirect("/it/dashboard");
     case "headmaster":
+    case "assistant_headmaster":
       redirect("/headmaster/dashboard");
     case "academic_head":
       redirect("/academic/dashboard");
