@@ -64,7 +64,7 @@ export default async function FinancePage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await requireRole(["admin", "finance_officer", "headmaster"]);
+  const session = await requireRole(["admin", "finance_officer", "headmaster", "assistant_headmaster"]);
   const canManageFinance = hasRole(session.role, session.additionalRoles, "admin") || hasRole(session.role, session.additionalRoles, "finance_officer");
   const params = (await searchParams) ?? {};
   const indexNumber = typeof params.index === "string" ? params.index.trim() : "";

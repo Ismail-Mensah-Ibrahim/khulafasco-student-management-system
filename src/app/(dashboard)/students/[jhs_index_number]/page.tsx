@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ jhs_index
 }
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ jhs_index_number: string }> }) {
-  const session = await requireRole(["admin", "finance_officer", "headmaster", "academic_head"]);
+  const session = await requireRole(["admin", "finance_officer", "headmaster", "assistant_headmaster", "academic_head"]);
 
   const { jhs_index_number } = await params;
   const student = await getStudentByJhsIndexNumber(jhs_index_number);
