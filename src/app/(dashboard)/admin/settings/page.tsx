@@ -72,7 +72,7 @@ export default async function SettingsPage() {
     },
     {
       title: "Staff Access & Accounts",
-      description: "Provision staff user accounts across all 8 institutional system roles.",
+      description: "Provision staff user accounts across institutional system roles.",
       href: "/admin/staff",
       icon: Shield,
       count: `${staff.length} staff members`,

@@ -36,7 +36,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ jhs_in
     // Strict Role Authorization:
     // - Global staff (Admin, Headmaster, Academic Head, Finance, Teacher, IT) have school-wide photo access.
     // - House Master & House Mistress are strictly restricted to students in their assigned house.
-    const isGlobalStaff = ['admin', 'headmaster', 'academic_head', 'finance_officer', 'teacher', 'it_officer']
+    const isGlobalStaff = ['admin', 'headmaster', 'assistant_headmaster', 'academic_head', 'finance_officer', 'teacher', 'it_officer']
       .some((role) => hasRole(session.role, session.additionalRoles, role as typeof session.role));
     const isHouseStaff = hasRole(session.role, session.additionalRoles, 'house_master') || hasRole(session.role, session.additionalRoles, 'house_mistress') || Boolean(session.houseResponsibility);
 

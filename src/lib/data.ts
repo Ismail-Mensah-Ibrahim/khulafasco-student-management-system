@@ -300,6 +300,7 @@ export async function getHouses(options: { throwOnError?: boolean } = {}): Promi
   const { data, error } = await supabase
     .from("houses")
     .select("*")
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
 
   if (error) {
@@ -639,13 +640,13 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
   const academicYears = await getAcademicYears();
   const currentAcademicYear = academicYears.find((year) => year.is_current) ?? academicYears[0] ?? null;
 
-  const studentQuery = supabase
+  let studentQuery = supabase
     .from("students")
     .select("id, total_amount_due, academic_year_id")
     .order("created_at", { ascending: false });
 
   if (currentAcademicYear?.id) {
-    studentQuery.eq("academic_year_id", currentAcademicYear.id);
+    studentQuery = studentQuery.eq("academic_year_id", currentAcademicYear.id);
   }
 
   const [studentsResult, paymentsResult] = await Promise.allSettled([
@@ -677,8 +678,8 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
   const studentRows = studentsQuery?.data ?? [];
   const paymentRows = paymentsQuery?.data ?? [];
   const chargesResult = await supabase
-    .from("student_charges")
-    .select("amount, academic_year_id, fee_type_id, fee_types(name)")
+    .from("student_fee_charges")
+    .select("amount_due, academic_year_id, fee_type_id, fee_types(name)")
     .order("created_at", { ascending: false });
 
   const chargeRows = chargesResult.data ?? [];
@@ -729,7 +730,7 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
 
     const feeName = (charge as { fee_types?: { name?: string } | null }).fee_types?.name ?? "Uncategorized Fee";
     const currentFeeTotal = feeTypeMap.get(feeName) ?? { total: 0, count: 0 };
-    const amount = Number(charge.amount ?? 0);
+    const amount = Number((charge as { amount_due?: number }).amount_due ?? 0);
 
     feeTypeMap.set(feeName, {
       total: currentFeeTotal.total + amount,
@@ -1069,7 +1070,13 @@ export async function getTeacherWorkloadSummary(
     getTimetableEntries({ academicYearId, semesterId }),
   ]);
 
-  const teachers = staff.filter((s) => s.role === "teacher" || s.is_active);
+  const teachers = staff.filter((s) =>
+    s.is_active &&
+    (s.role === "teacher" ||
+      s.role === "academic_head" ||
+      s.role === "assistant_headmaster" ||
+      s.additional_roles?.includes("teacher"))
+  );
 
   return teachers.map((teacher) => {
     const teacherAssignments = assignments.filter((a) => a.teacher_id === teacher.id);
@@ -1722,6 +1729,7 @@ export async function getHouseDashboardData(
     const { data: allHousesData } = await supabase
       .from("houses")
       .select("*")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true });
 
     const allHouses = allHousesData || [];

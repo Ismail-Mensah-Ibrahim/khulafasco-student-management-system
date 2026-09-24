@@ -3,7 +3,6 @@ import Link from "next/link";
 import { SCHOOL } from "@/config/branding";
 import { requireTeacher } from "@/lib/dal";
 import {
-  getStudentResults,
   getRequests,
   getTeacherAssignments,
   getTimetableEntries,
@@ -30,8 +29,7 @@ export const metadata: Metadata = {
 export default async function TeacherDashboardPage() {
   const session = await requireTeacher();
 
-  const [results, myRequests, myAssignments, myTimetable] = await Promise.all([
-    getStudentResults(),
+  const [myRequests, myAssignments, myTimetable] = await Promise.all([
     getRequests({ requesterId: session.id }),
     getTeacherAssignments({ teacherId: session.id }),
     getTimetableEntries({ teacherId: session.id }),
@@ -43,9 +41,6 @@ export default async function TeacherDashboardPage() {
   const houseLabel = session.houseResponsibility
     ? HOUSE_RESPONSIBILITY_LABELS[session.houseResponsibility]
     : null;
-
-  // suppress unused variable warning
-  void results;
 
   return (
     <div className="space-y-6">

@@ -49,7 +49,7 @@ export default async function StudentsPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireRole(["admin", "finance_officer", "headmaster", "academic_head"]);
+  await requireRole(["admin", "finance_officer", "headmaster", "assistant_headmaster", "academic_head"]);
 
   const params = (await searchParams) ?? {};
   const search = typeof params.search === "string" ? params.search : "";

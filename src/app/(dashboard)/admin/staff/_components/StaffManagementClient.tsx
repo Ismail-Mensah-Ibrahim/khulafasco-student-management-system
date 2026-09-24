@@ -96,6 +96,7 @@ export function StaffManagementClient({
 
   const isSeniorHouseResponsibility =
     newResponsibility === "senior_house_master" || newResponsibility === "senior_house_mistress";
+  const isHouseSpecificPrimaryRole = newRole === "house_master" || newRole === "house_mistress";
 
   // Filtering
   const filteredStaff = staffList.filter((staff) => {
@@ -129,6 +130,15 @@ export function StaffManagementClient({
 
   function handleSaveRole() {
     if (!roleModalStaff) return;
+
+    if (isSeniorHouseResponsibility && isHouseSpecificPrimaryRole) {
+      setFeedback({
+        type: "error",
+        message: "Senior House Master/Mistress must use a non-house primary role. Choose a different primary role or assign a residential house instead.",
+      });
+      return;
+    }
+
     const targetStaff = roleModalStaff;
     const houseIdForSubmission =
       isSeniorHouseResponsibility ? "" : selectedHouseId || "";
@@ -590,7 +600,18 @@ export function StaffManagementClient({
               </label>
               <select
                 value={newRole}
-                onChange={(e) => setNewRole(e.target.value as UserRole)}
+                onChange={(e) => {
+                  const nextRole = e.target.value as UserRole;
+                  if (isSeniorHouseResponsibility && (nextRole === "house_master" || nextRole === "house_mistress")) {
+                    setNewRole("teacher");
+                    setFeedback({
+                      type: "warning",
+                      message: "Senior House assignments require a non-house primary role. The role was reset to Teacher.",
+                    });
+                    return;
+                  }
+                  setNewRole(nextRole);
+                }}
                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
               >
                 {ROLES.map((r) => (
@@ -637,10 +658,21 @@ export function StaffManagementClient({
                 value={newResponsibility}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setNewResponsibility(val);
-                  if (val === "senior_house_master" || val === "senior_house_mistress" || val === "") {
+
+                  if (val === "senior_house_master" || val === "senior_house_mistress") {
+                    if (newRole === "house_master" || newRole === "house_mistress") {
+                      setNewRole("teacher");
+                    }
+                    setSelectedHouseId("");
+                    setFeedback({
+                      type: "warning",
+                      message: "Senior House roles are school-wide oversight and do not use a residential house assignment.",
+                    });
+                  } else if (val === "") {
                     setSelectedHouseId("");
                   }
+
+                  setNewResponsibility(val);
                 }}
                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm font-medium focus:outline-hidden focus:ring-1 focus:ring-primary"
               >

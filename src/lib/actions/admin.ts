@@ -542,11 +542,19 @@ export async function updateStaffRoleAction(formData: FormData): Promise<StaffAc
   // Senior house oversight is school-wide and does not require a specific house assignment.
   const isSeniorHouseResponsibility =
     validResponsibility === "senior_house_master" || validResponsibility === "senior_house_mistress";
+  const isHouseSpecificPrimaryRole = newRole === "house_master" || newRole === "house_mistress";
+
+  if (isSeniorHouseResponsibility && isHouseSpecificPrimaryRole) {
+    return {
+      success: false,
+      message: "Senior House Master/Mistress must use a non-house primary role. Choose a different primary role or assign a residential house instead.",
+    };
+  }
 
   let finalHouseId: string | null = null;
   if (isSeniorHouseResponsibility) {
     finalHouseId = null;
-  } else if (validResponsibility === "house_master" || validResponsibility === "house_mistress" || newRole === "house_master" || newRole === "house_mistress") {
+  } else if (validResponsibility === "house_master" || validResponsibility === "house_mistress" || isHouseSpecificPrimaryRole) {
     finalHouseId = houseIdInput;
     if (!finalHouseId) {
       return { success: false, message: "Please select a residential house for the House Master/Mistress responsibility." };

@@ -110,6 +110,23 @@ export function getNavItemsForRole(
       ];
       break;
 
+    case "assistant_headmaster":
+      items = [
+        { label: "Executive Dashboard", href: "/headmaster/dashboard", icon: LayoutDashboard, roles: ["assistant_headmaster"] },
+        { label: "Students Directory", href: "/students", icon: Users, roles: ["assistant_headmaster"], section: "School" },
+        { label: "Enroll Student", href: "/students/enroll", icon: UserPlus, roles: ["assistant_headmaster"], section: "School" },
+        { label: "Cohort Promotion", href: "/students/promotion", icon: GraduationCap, roles: ["assistant_headmaster"], section: "School" },
+        { label: "Transfers (STP)", href: "/students/transfers", icon: ArrowRightLeft, roles: ["assistant_headmaster"], section: "School" },
+        { label: "Classes & Curriculum", href: "/academic/classes", icon: BookOpen, roles: ["assistant_headmaster"], section: "Academics" },
+        { label: "Timetable Management", href: "/academic/timetable", icon: Calendar, roles: ["assistant_headmaster"], section: "Academics" },
+        { label: "WAEC STP Portal", href: "/academic/waec-stp", icon: FileCheck, roles: ["assistant_headmaster"], section: "Academics" },
+        { label: "Academics Overview", href: "/academic/dashboard", icon: GraduationCap, roles: ["assistant_headmaster"], section: "Academics" },
+        { label: "Finance Overview", href: "/finance", icon: DollarSign, roles: ["assistant_headmaster"], section: "Finance" },
+        { label: "Operational Requests", href: "/requests", icon: FileText, roles: ["assistant_headmaster"], section: "Governance" },
+        { label: "Security & Audit", href: "/it/audit", icon: ShieldAlert, roles: ["assistant_headmaster"], section: "Governance" },
+      ];
+      break;
+
     case "teacher":
       items = [
         { label: "Teacher Dashboard", href: "/teacher/dashboard", icon: LayoutDashboard, roles: ["teacher"] },

@@ -71,12 +71,14 @@ export async function getHouseDistributionData(
   const { data: fullHouses, error: fullError } = await supabase
     .from("houses")
     .select("*")
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("name", { ascending: true });
 
   if (fullError || !fullHouses) {
     const { data: basicHouses, error: basicError } = await supabase
       .from("houses")
-      .select("id, name, is_active")
+      .select("id, name, is_active, sort_order")
+      .order("sort_order", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true });
 
     if (basicError || !basicHouses) {

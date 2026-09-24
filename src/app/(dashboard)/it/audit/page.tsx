@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function SecurityAuditCenterPage() {
-  await requireRole(["admin", "it_officer", "headmaster"]);
+  await requireRole(["admin", "it_officer", "headmaster", "assistant_headmaster"]);
   const [logs, staffList] = await Promise.all([
     getAuditLogs({ limit: 500 }),
     getStaffProfiles(),

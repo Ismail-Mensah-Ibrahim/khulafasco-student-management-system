@@ -142,14 +142,14 @@ export async function requireHeadmaster(): Promise<SessionUser> {
  * Verify session AND require Academic Head role.
  */
 export async function requireAcademicHead(): Promise<SessionUser> {
-  return requireRole(["academic_head", "headmaster", "admin"]);
+  return requireRole(["academic_head", "assistant_headmaster", "headmaster", "admin"]);
 }
 
 /**
  * Verify session AND require Teacher role.
  */
 export async function requireTeacher(): Promise<SessionUser> {
-  return requireRole(["teacher", "academic_head", "admin"]);
+  return requireRole(["teacher", "academic_head", "assistant_headmaster", "admin"]);
 }
 
 /**
@@ -173,6 +173,8 @@ export async function requireHouseStaff(): Promise<SessionUser> {
   const session = await verifySession();
   const isAllowed =
     hasRole(session.role, session.additionalRoles, "admin") ||
+    hasRole(session.role, session.additionalRoles, "headmaster") ||
+    hasRole(session.role, session.additionalRoles, "assistant_headmaster") ||
     hasRole(session.role, session.additionalRoles, "house_master") ||
     hasRole(session.role, session.additionalRoles, "house_mistress") ||
     session.houseResponsibility === "house_master" ||
@@ -193,6 +195,8 @@ export async function requireSeniorHouseStaff(): Promise<SessionUser> {
   const session = await verifySession();
   const isAllowed =
     hasRole(session.role, session.additionalRoles, "admin") ||
+    hasRole(session.role, session.additionalRoles, "headmaster") ||
+    hasRole(session.role, session.additionalRoles, "assistant_headmaster") ||
     session.houseResponsibility === "senior_house_master" ||
     session.houseResponsibility === "senior_house_mistress";
 
@@ -220,14 +224,14 @@ export async function requireFinanceOrAdmin(): Promise<SessionUser> {
  * Verify session AND require academic_head or admin role.
  */
 export async function requireAcademicOrAdmin(): Promise<SessionUser> {
-  return requireRole(["academic_head", "admin"]);
+  return requireRole(["academic_head", "assistant_headmaster", "admin"]);
 }
 
 /**
  * Verify session AND require Headmaster or Admin (request reviewers).
  */
 export async function requireReviewer(): Promise<SessionUser> {
-  return requireRole(["headmaster", "admin"]);
+  return requireRole(["headmaster", "assistant_headmaster", "admin"]);
 }
 
 /**

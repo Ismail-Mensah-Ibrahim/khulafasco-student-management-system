@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SCHOOL } from "@/config/branding";
-import { requireHeadmaster } from "@/lib/dal";
+import { requireRole } from "@/lib/dal";
 import {
   getDashboardSummary,
   getFinanceDashboardMetrics,
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HeadmasterDashboardPage() {
-  const session = await requireHeadmaster();
+  const session = await requireRole(["headmaster", "assistant_headmaster", "admin"]);
 
   const [summary, finance, pendingRequests] = await Promise.all([
     getDashboardSummary(),

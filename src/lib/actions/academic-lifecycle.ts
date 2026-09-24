@@ -28,6 +28,7 @@ async function canBeAssignedTeachingWork(
     data?.is_active &&
       (data.role === "admin" ||
         data.role === "academic_head" ||
+        data.role === "assistant_headmaster" ||
         data.role === "teacher" ||
         data.additional_roles?.includes("teacher"))
   );
