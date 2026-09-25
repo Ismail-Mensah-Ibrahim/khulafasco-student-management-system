@@ -10,6 +10,7 @@ import { getAcademicYears, getFinancePayments } from "@/lib/data";
 import { formatCurrency, getFullName } from "@/lib/utils";
 import { paymentListQuerySchema, type FinancePayments, type PaymentListQuery } from "@/lib/validation/finance";
 import { SCHOOL } from "@/config/branding";
+import { PaymentActionsCell } from "./PaymentActionsCell";
 
 export const metadata: Metadata = {
   title: `Payments | ${SCHOOL.shortName}`,
@@ -262,6 +263,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams?: Pr
                     {formatPaidAt(payment.paid_at)}
                   </span>
                 ),
+              },
+              {
+                key: "actions",
+                header: "Actions",
+                cell: (payment: PaymentItem) => <PaymentActionsCell payment={payment} />,
               },
             ]}
             data={result.data.items}
