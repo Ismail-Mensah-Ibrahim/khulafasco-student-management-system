@@ -119,5 +119,62 @@ export async function recordStudentPaymentAction(
   }
 
   revalidatePath("/finance");
+  revalidatePath("/finance/payments");
+  revalidatePath("/finance/receipts");
+  revalidatePath("/dashboard");
+
   return { success: true, indexNumber: values.jhs_index_number, payment: payment.data };
 }
+
+export interface ReversePaymentActionResult {
+  success: boolean;
+  message: string;
+}
+
+export async function reverseStudentPaymentAction(
+  input: FormData | { payment_id: string; reason: string }
+): Promise<ReversePaymentActionResult> {
+  await requireFinanceOrAdmin();
+  const paymentId = input instanceof FormData ? getText(input, "payment_id") : input.payment_id;
+  const reason = input instanceof FormData ? getText(input, "reason") : input.reason;
+
+  if (!paymentId || !reason) {
+    return {
+      success: false,
+      message: "Payment ID and a valid reversal reason are required.",
+    };
+  }
+
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("reverse_student_payment", {
+      p_payment_id: paymentId,
+      p_reason: reason.trim(),
+    });
+
+    if (error) {
+      console.error("reverseStudentPaymentAction error:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to reverse the payment.",
+      };
+    }
+
+    revalidatePath("/finance");
+    revalidatePath("/finance/payments");
+    revalidatePath("/finance/receipts");
+    revalidatePath("/dashboard");
+
+    return {
+      success: true,
+      message: "Payment has been reversed successfully.",
+    };
+  } catch (err: unknown) {
+    console.error("reverseStudentPaymentAction exception:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "Failed to reverse payment.",
+    };
+  }
+}
+

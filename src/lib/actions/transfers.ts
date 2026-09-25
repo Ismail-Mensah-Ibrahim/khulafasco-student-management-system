@@ -23,15 +23,12 @@ function getText(formData: FormData, name: string): string {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function generateReference(supabase: any): Promise<string> {
-  try {
-    const { data, error } = await supabase.rpc("generate_transfer_reference");
-    if (!error && data) return String(data);
-  } catch (err) {
-    console.warn("generate_transfer_reference RPC fallback:", err);
+  const { data, error } = await supabase.rpc("generate_transfer_reference");
+  if (error || !data) {
+    console.error("generate_transfer_reference RPC error:", error);
+    throw new Error("Failed to generate official transfer reference sequence from the database.");
   }
-  const year = new Date().getFullYear();
-  const rand = Math.floor(100000 + Math.random() * 900000);
-  return `STP-${year}-${rand}`;
+  return String(data);
 }
 
 // ---------------------------------------------------------------------------

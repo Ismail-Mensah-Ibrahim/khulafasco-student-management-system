@@ -7,6 +7,13 @@ import configuration from "./config/configuration";
 import { validate } from "./config/env.validation";
 import { DatabaseModule } from "./database/database.module";
 import { HealthModule } from "./health/health.module";
+import { StudentsModule } from "./modules/students/students.module";
+import { StaffModule } from "./modules/staff/staff.module";
+import { HousesModule } from "./modules/houses/houses.module";
+import { FinanceModule } from "./modules/finance/finance.module";
+import { TimetableModule } from "./modules/timetable/timetable.module";
+import { TransfersModule } from "./modules/transfers/transfers.module";
+import { AuditModule } from "./modules/audit/audit.module";
 
 import { AuthGuard } from "./common/guards/auth.guard";
 import { RolesGuard } from "./common/guards/roles.guard";
@@ -30,6 +37,13 @@ import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
     ]),
     DatabaseModule,
     HealthModule,
+    StudentsModule,
+    StaffModule,
+    HousesModule,
+    FinanceModule,
+    TimetableModule,
+    TransfersModule,
+    AuditModule,
   ],
   providers: [
     // Global Exception Filter

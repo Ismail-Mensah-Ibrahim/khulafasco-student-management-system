@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     ".history/**",
     "scripts/**",
     "backend/**",
+    ".kilo/**",
   ]),
 ]);
 

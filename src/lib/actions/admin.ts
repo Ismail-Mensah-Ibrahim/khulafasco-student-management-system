@@ -439,8 +439,9 @@ export async function createFeeTypeAction(formData: FormData): Promise<void> {
 }
 
 export async function createStaffAction(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const session = await requireAdmin();
   const supabase = await createClient();
+  const adminClient = createAdminClient();
 
   const full_name = getText(formData, "full_name");
   const email = getText(formData, "email");
@@ -452,29 +453,54 @@ export async function createStaffAction(formData: FormData): Promise<void> {
     redirect("/admin/staff");
   }
 
-  const { data: authData, error: signUpError } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
+  let userId: string | null = null;
+
+  if (adminClient) {
+    const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
         full_name,
         role,
         phone,
         is_active: true,
       },
-    },
-  });
+    });
 
-  if (signUpError || !authData.user) {
-    console.error("createStaffAction signUp error:", signUpError);
-    redirect("/admin/staff");
+    if (createError || !createData.user) {
+      console.error("createStaffAction admin.createUser error:", createError);
+      redirect("/admin/staff");
+    }
+    userId = createData.user.id;
+  } else {
+    // Fallback if service-role key is not configured locally
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name,
+          role,
+          phone,
+          is_active: true,
+        },
+      },
+    });
+
+    if (signUpError || !authData.user) {
+      console.error("createStaffAction signUp error:", signUpError);
+      redirect("/admin/staff");
+    }
+    userId = authData.user.id;
   }
 
   const { error: profileError } = await supabase
     .from("profiles")
     .upsert({
-      id: authData.user.id,
+      id: userId,
       full_name,
+      email,
       role: role as (typeof ROLES)[number],
       phone,
       is_active: true,
@@ -484,7 +510,29 @@ export async function createStaffAction(formData: FormData): Promise<void> {
 
   if (profileError) {
     console.error("createStaffAction profile upsert error:", profileError);
+    // Compensating rollback: delete auth user if profile creation failed to prevent orphan
+    if (adminClient && userId) {
+      try {
+        await adminClient.auth.admin.deleteUser(userId);
+      } catch (rollbackErr) {
+        console.error("Failed to rollback auth user after profile failure:", rollbackErr);
+      }
+    }
+    redirect("/admin/staff");
   }
+
+  // Audit staff creation
+  await supabase.from("audit_logs").insert({
+    user_id: session.id,
+    actor_role: session.role,
+    action: "STAFF_CREATED",
+    module: "STAFF",
+    target_identifier: userId,
+    description: `Created new staff account for "${full_name}" with role "${role}"`,
+    severity: "INFO",
+    status: "SUCCESS",
+    metadata: { full_name, email, role, phone },
+  });
 
   revalidatePath("/admin/staff");
   redirect("/admin/staff");
@@ -1097,3 +1145,34 @@ export async function updateStaffEmailAction(formData: FormData): Promise<StaffA
   revalidatePath("/admin/staff");
   return { success: true, message: `Email successfully updated to ${newEmail}.` };
 }
+
+export async function archiveAuditLogsAction(
+  input?: FormData | { retentionDays?: number; older_than_days?: number }
+): Promise<{ success: boolean; message: string; count?: number }> {
+  await requireAdmin();
+  let olderThanDays: number | undefined;
+
+  if (input instanceof FormData) {
+    const daysRaw = input.get("older_than_days") ?? input.get("retentionDays");
+    olderThanDays = daysRaw ? Number(daysRaw) : undefined;
+  } else if (input) {
+    olderThanDays = input.retentionDays ?? input.older_than_days;
+  }
+
+  const { archiveOldAuditLogs } = await import("@/lib/audit");
+  const result = await archiveOldAuditLogs(olderThanDays);
+
+  if (!result.success) {
+    return { success: false, message: result.error || "Failed to archive audit logs." };
+  }
+
+  revalidatePath("/admin/audit-logs");
+  revalidatePath("/it/audit");
+
+  return {
+    success: true,
+    message: `Successfully archived ${result.count} log record(s) older than ${result.retentionDays} days into the persistent archive.`,
+    count: result.count,
+  };
+}
+

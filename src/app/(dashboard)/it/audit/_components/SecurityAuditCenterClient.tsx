@@ -11,6 +11,8 @@ import {
   X,
   FileCode,
   Download,
+  Archive,
+  Loader2,
 } from "lucide-react";
 import {
   AUDIT_MODULES,
@@ -27,9 +29,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { archiveAuditLogsAction } from "@/lib/actions/admin";
 
 interface SecurityAuditCenterClientProps {
   initialLogs: AuditLog[];
@@ -50,6 +54,37 @@ export function SecurityAuditCenterClient({
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
   const [detailModalLog, setDetailModalLog] = useState<AuditLog | null>(null);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [retentionDays, setRetentionDays] = useState(90);
+  const [archivePending, setArchivePending] = useState(false);
+  const [archiveMessage, setArchiveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  async function handleArchiveLogs() {
+    setArchivePending(true);
+    setArchiveMessage(null);
+    try {
+      const res = await archiveAuditLogsAction({ retentionDays });
+      if (res.success) {
+        setArchiveMessage({
+          type: "success",
+          text: `Successfully archived ${res.count ?? 0} log records older than ${retentionDays} days.`,
+        });
+      } else {
+        setArchiveMessage({
+          type: "error",
+          text: res.message || "Failed to archive audit logs.",
+        });
+      }
+    } catch (err: unknown) {
+      setArchiveMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "An unexpected error occurred during archival.",
+      });
+    } finally {
+      setArchivePending(false);
+    }
+  }
+
   const logs = initialLogs;
 
   // Filter in-memory or on server
@@ -346,15 +381,85 @@ export function SecurityAuditCenterClient({
               Chronological Audit Trail ({filteredLogs.length} Records)
             </CardTitle>
           </div>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={handleExportCsv}
-            disabled={filteredLogs.length === 0}
-            className="text-xs"
-          >
-            <Download className="size-3.5 mr-1" /> Export CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={handleExportCsv}
+              disabled={filteredLogs.length === 0}
+              className="text-xs"
+            >
+              <Download className="size-3.5 mr-1" /> Export CSV
+            </Button>
+
+            <Dialog open={archiveOpen} onOpenChange={setArchiveOpen}>
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() => setArchiveOpen(true)}
+                className="text-xs text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              >
+                <Archive className="size-3.5 mr-1" /> Archive Logs
+              </Button>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <div className="flex items-center gap-2 text-amber-600">
+                    <Archive className="size-5" />
+                    <DialogTitle className="text-base font-semibold">Archive Historical Logs</DialogTitle>
+                  </div>
+                  <DialogDescription className="text-xs text-muted-foreground pt-1">
+                    Move older audit records from the active hot table into cold partition archives to maintain optimal database query speeds.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-2 text-xs">
+                  {archiveMessage && (
+                    <div
+                      className={`p-2.5 rounded border text-xs ${
+                        archiveMessage.type === "success"
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                          : "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300"
+                      }`}
+                    >
+                      {archiveMessage.text}
+                    </div>
+                  )}
+                  <div>
+                    <label className="block font-medium mb-1">Retention Window</label>
+                    <select
+                      value={retentionDays}
+                      onChange={(e) => setRetentionDays(Number(e.target.value))}
+                      className="w-full h-8 px-2 rounded-md border border-input bg-background text-xs"
+                      disabled={archivePending}
+                    >
+                      <option value={30}>Logs older than 30 days (1 month)</option>
+                      <option value={90}>Logs older than 90 days (3 months - Recommended)</option>
+                      <option value={180}>Logs older than 180 days (6 months)</option>
+                      <option value={365}>Logs older than 365 days (1 year)</option>
+                    </select>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" size="sm" onClick={() => setArchiveOpen(false)} disabled={archivePending}>
+                    Close
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleArchiveLogs}
+                    disabled={archivePending}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    {archivePending ? (
+                      <>
+                        <Loader2 className="mr-1.5 size-3.5 animate-spin" /> Archiving...
+                      </>
+                    ) : (
+                      "Start Archival"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
 
         <CardContent className="p-0">

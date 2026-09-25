@@ -705,9 +705,18 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString();
   const endTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0).toISOString();
 
+  const currentYearStudentIdSet = new Set(studentRows.map((s: { id: string }) => s.id));
   const studentPaid = new Map<string, number>();
 
-  for (const payment of paymentRows.filter((row: { status?: string; student_id?: string; amount?: number | string; paid_at?: string }) => row.status === "completed")) {
+  const activePayments = paymentRows.filter((row: { status?: string; student_id?: string; amount?: number | string; paid_at?: string }) => {
+    if (row.status !== "completed") return false;
+    if (currentAcademicYear?.id && row.student_id && !currentYearStudentIdSet.has(row.student_id)) {
+      return false;
+    }
+    return true;
+  });
+
+  for (const payment of activePayments) {
     const studentId = payment.student_id as string;
     const amount = Number(payment.amount ?? 0);
     const method = (payment.payment_method ?? "other") as PaymentMethodValue;
@@ -760,9 +769,9 @@ export async function getFinanceDashboardMetrics(): Promise<FinanceDashboardMetr
     }
   }
 
-  const todayPaymentCount = paymentRows.filter((row: { status?: string; paid_at?: string }) => row.status === "completed" && row.paid_at && row.paid_at >= startToday && row.paid_at < endTomorrow).length;
-  const todayCollected = paymentRows
-    .filter((row: { status?: string; paid_at?: string; amount?: number | string }) => row.status === "completed" && row.paid_at && row.paid_at >= startToday && row.paid_at < endTomorrow)
+  const todayPaymentCount = activePayments.filter((row: { paid_at?: string }) => row.paid_at && row.paid_at >= startToday && row.paid_at < endTomorrow).length;
+  const todayCollected = activePayments
+    .filter((row: { paid_at?: string; amount?: number | string }) => row.paid_at && row.paid_at >= startToday && row.paid_at < endTomorrow)
     .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
 
   const paymentBreakdown: PaymentBreakdownItem[] = [
