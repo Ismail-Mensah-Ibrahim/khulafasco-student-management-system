@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 export interface SystemHealthResult {
   isHealthy: boolean;
@@ -28,6 +28,7 @@ export interface SystemHealthResult {
 export async function getSystemHealthStatus(): Promise<SystemHealthResult> {
   const startTime = Date.now();
   const supabase = await createClient();
+  const adminClient = createAdminClient();
 
   let authOk = false;
   let dbOk = false;
@@ -82,18 +83,26 @@ export async function getSystemHealthStatus(): Promise<SystemHealthResult> {
 
   // 4. Storage Bucket Check
   try {
-    const { data, error } = await supabase.storage.getBucket("student-photos");
+    const storageClient = adminClient ?? supabase;
+    const { data, error } = await storageClient.storage.getBucket("student-photos");
     if (!error && data) {
       storageOk = true;
     } else {
-      storageMsg = error?.message ?? "Bucket not found or permission issue";
+      // Fallback check if getBucket metadata API call is restricted
+      const { error: listErr } = await supabase.storage.from("student-photos").list("", { limit: 1 });
+      if (!listErr) {
+        storageOk = true;
+        storageMsg = "OK";
+      } else {
+        storageMsg = error?.message ?? listErr?.message ?? "Bucket not found or permission issue";
+      }
     }
   } catch (err: unknown) {
     storageMsg = err instanceof Error ? err.message : "Storage service check error";
   }
 
   const latencyMs = Date.now() - startTime;
-  const isHealthy = dbOk && rpcOk;
+  const isHealthy = dbOk && rpcOk && storageOk;
 
   return {
     isHealthy,
