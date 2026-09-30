@@ -22,7 +22,7 @@ export class FinanceService {
     const { data: activeYear } = await supabase
       .from("academic_years")
       .select("id, name")
-      .eq("is_active", true)
+      .eq("is_current", true)
       .maybeSingle();
 
     if (!activeYear) {
@@ -37,7 +37,7 @@ export class FinanceService {
 
     // 2. Get students in current academic year
     const { data: enrollments } = await supabase
-      .from("class_enrollments")
+      .from("student_academic_enrollments")
       .select("student_id")
       .eq("academic_year_id", activeYear.id);
 

@@ -56,6 +56,7 @@ export default async function StudentsPage({
   const academicYearId = typeof params.academicYear === "string" ? params.academicYear : "";
   const programId = typeof params.program === "string" ? params.program : "";
   const houseId = typeof params.house === "string" ? params.house : "";
+  const formLevel = typeof params.formLevel === "string" ? params.formLevel : "";
   const studentType = typeof params.studentType === "string" ? params.studentType : "";
   const enrollmentStatus = typeof params.enrollmentStatus === "string" ? params.enrollmentStatus : "";
   const page = Number(typeof params.page === "string" ? params.page : "1") || 1;
@@ -69,6 +70,7 @@ export default async function StudentsPage({
       academicYearId: academicYearId || undefined,
       programId: programId || undefined,
       houseId: houseId || undefined,
+      formLevel: formLevel || undefined,
       studentType: studentType || undefined,
       enrollmentStatus: enrollmentStatus || undefined,
       page,
@@ -191,6 +193,23 @@ export default async function StudentsPage({
                   {house.name}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>
+              Form Level
+            </label>
+            <select
+              name="formLevel"
+              defaultValue={formLevel}
+              className="w-full rounded-lg border px-3 py-2.5 text-sm"
+              style={{ background: "var(--background)", borderColor: "var(--border)", color: "var(--foreground)" }}
+            >
+              <option value="">All Forms</option>
+              <option value="Form 1">Form 1</option>
+              <option value="Form 2">Form 2</option>
+              <option value="Form 3">Form 3</option>
             </select>
           </div>
 

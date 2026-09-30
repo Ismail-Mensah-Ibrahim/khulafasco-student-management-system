@@ -10,7 +10,7 @@ export class TimetableService {
     const supabase = this.supabaseService.getAdminClient();
 
     const { data: periods, error } = await supabase
-      .from("timetable_periods")
+      .from("timetables")
       .select(
         `
         id,
@@ -59,7 +59,7 @@ export class TimetableService {
 
     // 1. Check teacher collision
     let teacherQuery = supabase
-      .from("timetable_periods")
+      .from("timetables")
       .select("id, class:class_id(name)")
       .eq("teacher_id", dto.teacher_id)
       .eq("day_of_week", dto.day_of_week)
@@ -80,7 +80,7 @@ export class TimetableService {
 
     // 2. Check class collision
     let classQuery = supabase
-      .from("timetable_periods")
+      .from("timetables")
       .select("id, subject:subject_id(name)")
       .eq("class_id", dto.class_id)
       .eq("day_of_week", dto.day_of_week)

@@ -83,7 +83,7 @@ export class StudentsService {
         `
         *,
         house:house_id (id, name, code),
-        class_enrollments (
+        student_academic_enrollments (
           id,
           academic_year_id,
           semester_id,

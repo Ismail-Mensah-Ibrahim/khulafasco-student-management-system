@@ -25,7 +25,7 @@ export class StaffService {
         role,
         additional_roles,
         house_responsibility,
-        assigned_house_id,
+        house_id,
         is_active,
         created_at
       `,
@@ -81,7 +81,7 @@ export class StaffService {
 
     const supabase = this.supabaseService.getAdminClient();
     const { data, error } = await supabase
-      .from("timetable_periods")
+      .from("timetables")
       .select(
         `
         id,
