@@ -6,6 +6,10 @@ import { verifySession } from "@/lib/dal";
 import { getDashboardSummary, getFinanceDashboardMetrics } from "@/lib/data";
 import { formatCurrency } from "@/lib/utils";
 import { hasRole } from "@/config/constants";
+import { getPendingOperations, getPendingOperationsSummary } from "@/lib/actions/pending-operations";
+import { getSystemHealthStatus } from "@/lib/actions/health";
+import { PendingOperationsWidget } from "@/components/admin/PendingOperationsWidget";
+import { SystemHealthWidget } from "@/components/admin/SystemHealthWidget";
 import {
   Users,
   Home,
@@ -222,9 +226,12 @@ export default async function DashboardPage() {
     }
   }
 
-  const [summary, metrics] = await Promise.all([
+  const [summary, metrics, pendingOps, pendingSummary, health] = await Promise.all([
     getDashboardSummary(),
     getFinanceDashboardMetrics(),
+    getPendingOperations(),
+    getPendingOperationsSummary(),
+    getSystemHealthStatus(),
   ]);
 
   return (
@@ -543,6 +550,27 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* ---- System Health ---- */}
+      <section>
+        <h2 className="text-xs font-semibold uppercase tracking-widest mb-3"
+          style={{ color: "var(--muted-foreground)" }}>
+          Infrastructure Health
+        </h2>
+        <SystemHealthWidget health={health} />
+      </section>
+
+      {/* ---- Pending Operations ---- */}
+      <section>
+        <h2 className="text-xs font-semibold uppercase tracking-widest mb-3"
+          style={{ color: "var(--muted-foreground)" }}>
+          Resiliency Queue
+        </h2>
+        <PendingOperationsWidget
+          initialOperations={pendingOps}
+          summary={pendingSummary}
+        />
+      </section>
     </div>
   );
 }

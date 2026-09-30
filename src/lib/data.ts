@@ -91,6 +91,7 @@ export interface StudentQueryFilters {
   academicYearId?: string;
   programId?: string;
   houseId?: string;
+  formLevel?: string;
   studentType?: string;
   enrollmentStatus?: string;
   page?: number;
@@ -505,6 +506,20 @@ export async function getStudentsPage(filters: StudentQueryFilters = {}): Promis
 
   if (filters.houseId) {
     query = query.eq("house_id", filters.houseId);
+  }
+
+  if (filters.formLevel) {
+    const { data: levelEnrollments } = await supabase
+      .from("student_academic_enrollments")
+      .select("student_id")
+      .eq("level", filters.formLevel);
+
+    const studentIds = Array.from(new Set(levelEnrollments?.map((e) => e.student_id).filter(Boolean) ?? []));
+    if (studentIds.length > 0) {
+      query = query.in("id", studentIds);
+    } else {
+      query = query.in("id", ["00000000-0000-0000-0000-000000000000"]);
+    }
   }
 
   if (filters.studentType) {
